@@ -48,7 +48,7 @@ scripts/
   validate_schemas.py
 ```
 
-Future bundle releases should live under:
+Bundle releases and historical seeds live under:
 
 ```text
 bundles/
@@ -67,6 +67,13 @@ bundles/
       constraints-all-py313.txt
     validation-report.json
 ```
+
+The current `bundles/4.3.1/` directory is a historical seed derived from the
+published `policyengine==4.3.1` wheel. Its `validation-report.json` is marked
+`failed` on purpose because that release did not exact-pin `policyengine-core`
+and the private UK data artifact checksum was not present in the bundled
+manifest. This makes the current reproducibility gaps machine-readable instead
+of hiding them.
 
 ## Profiles
 

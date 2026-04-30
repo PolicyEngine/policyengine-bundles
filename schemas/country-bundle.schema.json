@@ -162,7 +162,46 @@
       "required": [
         "kind",
         "uri",
-        "sha256"
+        "status"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "certified"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "required": [
+              "sha256"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "unverified",
+                  "unavailable"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "required": [
+              "missing_reason"
+            ]
+          }
+        }
       ],
       "properties": {
         "kind": {
@@ -171,8 +210,19 @@
         "uri": {
           "type": "string"
         },
+        "status": {
+          "enum": [
+            "certified",
+            "unverified",
+            "unavailable"
+          ]
+        },
         "sha256": {
           "$ref": "#/$defs/hash_sha256"
+        },
+        "missing_reason": {
+          "type": "string",
+          "minLength": 1
         },
         "size_bytes": {
           "type": "integer",
@@ -197,8 +247,19 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "name",
-        "version"
+        "name"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "version"
+          ]
+        },
+        {
+          "required": [
+            "specifier"
+          ]
+        }
       ],
       "properties": {
         "name": {
@@ -207,12 +268,26 @@
         "version": {
           "$ref": "#/$defs/version"
         },
+        "specifier": {
+          "type": "string",
+          "minLength": 1
+        },
+        "resolution_status": {
+          "enum": [
+            "pinned",
+            "specifier_only",
+            "unresolved"
+          ]
+        },
         "sha256": {
           "$ref": "#/$defs/hash_sha256"
         },
         "wheel_url": {
           "type": "string",
           "format": "uri"
+        },
+        "source": {
+          "type": "string"
         },
         "git_sha": {
           "type": "string"
