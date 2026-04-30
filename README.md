@@ -1,5 +1,9 @@
 # PolicyEngine Bundles
 
+> This repository is currently for testing the PolicyEngine bundle design. Its
+> schemas, examples, and release contracts should not be treated as canonical
+> production infrastructure until the team explicitly promotes them.
+
 This repository is the immutable archive of PolicyEngine release bundles.
 
 A bundle is the release contract that connects one human-facing
