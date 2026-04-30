@@ -95,6 +95,89 @@ The bundle manifest is the canonical reproducibility record. Constraints and
 lockfiles are the exact install mechanisms for users who need byte-for-byte
 environment reproduction.
 
+## Demonstration: Historical 4.3.1 Seed
+
+The `bundles/4.3.1/` directory demonstrates how the bundle system should work
+once it is fully implemented, using the current published `policyengine==4.3.1`
+wheel as source material.
+
+Start from the human-facing version:
+
+```bash
+pip install "policyengine[us]==4.3.1"
+```
+
+The bundle record for that version is:
+
+```text
+bundles/4.3.1/bundle.json
+```
+
+That top-level manifest maps the `us`, `uk`, and `all` profiles to exact
+country manifests:
+
+```text
+bundles/4.3.1/countries/us.json
+bundles/4.3.1/countries/uk.json
+```
+
+For the US profile, the seed records:
+
+| Component | Recorded value |
+|---|---|
+| `policyengine` | `4.3.1` |
+| `policyengine-us` | `1.653.3` |
+| `policyengine-core` | `>=3.25.0` |
+| US data artifact | `hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@1.73.0` |
+| US data SHA256 | `18cdc668d05311c32ae37364abcea89b0221c27154559667e951c7b19f5b5cbd` |
+
+For the UK profile, the seed records:
+
+| Component | Recorded value |
+|---|---|
+| `policyengine` | `4.3.1` |
+| `policyengine-uk` | `2.88.0` |
+| `policyengine-core` | `>=3.25.0` |
+| UK data artifact | `hf://policyengine/policyengine-uk-data-private/enhanced_frs_2023_24.h5@1.40.4` |
+| UK data SHA256 | not present in the source wheel manifest |
+
+The validation report is intentionally not a success report:
+
+```text
+bundles/4.3.1/validation-report.json
+```
+
+It fails certification because:
+
+- `policyengine-core` was not exact-pinned by `policyengine==4.3.1`.
+- The private UK data artifact did not include a SHA256 in the bundled manifest.
+- No lockfiles or constraints files were produced for the release.
+- No bundle-level integration runtime was executed.
+
+This is the expected behavior for a historical seed. The bundle can represent
+what the old release knew, while making clear that the old release is not enough
+for single-version reproducibility.
+
+In a future fully certified bundle, the same flow should end with a passing
+validation report:
+
+```text
+policyengine==4.4.0
+  -> bundles/4.4.0/bundle.json
+  -> profile us
+  -> exact policyengine-core version
+  -> exact policyengine-us version
+  -> exact policyengine-us-data artifact URI and SHA256
+  -> solved constraints or lockfile
+  -> passing profile integration checks
+```
+
+Consumers such as `policyengine.py` or `policyengine-api-v2-alpha` should treat
+the bundle as the release contract. Given one `policyengine` version, a consumer
+can load the matching bundle, select a profile, resolve packages and datasets,
+and reject failed or incomplete bundles unless the caller explicitly asks to run
+with an uncertified historical seed.
+
 ## Validation
 
 Run local validation with:
