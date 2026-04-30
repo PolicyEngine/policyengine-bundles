@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "bundle_version": "0.0.0-example",
+  "created_at": "2026-04-30T00:00:00Z",
+  "policyengine": {
+    "name": "policyengine",
+    "version": "0.0.0-example"
+  },
+  "packages": {
+    "policyengine-core": {
+      "name": "policyengine-core",
+      "version": "0.0.0"
+    },
+    "policyengine-us": {
+      "name": "policyengine-us",
+      "version": "0.0.0"
+    }
+  },
+  "profiles": {
+    "us": {
+      "description": "US-only certified runtime profile.",
+      "packages": [
+        "policyengine",
+        "policyengine-core",
+        "policyengine-us"
+      ],
+      "countries": [
+        "us"
+      ],
+      "locks": {
+        "py313": "locks/pylock.us.py313.toml"
+      },
+      "constraints": {
+        "py313": "constraints/constraints-us-py313.txt"
+      }
+    }
+  },
+  "countries": {
+    "us": "countries/us.json"
+  },
+  "validation_report": "validation-report.json"
+}

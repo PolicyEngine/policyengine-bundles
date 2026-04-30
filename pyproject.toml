@@ -1,0 +1,21 @@
+[project]
+name = "policyengine-bundles"
+version = "0.0.0"
+description = "Immutable PolicyEngine bundle manifests, locks, constraints, and validation reports."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "jsonschema>=4.22",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "W"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

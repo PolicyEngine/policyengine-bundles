@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://policyengine.org/schemas/policyengine-country-bundle.schema.json",
+  "title": "PolicyEngine country bundle",
+  "description": "Country-specific certification manifest for one PolicyEngine bundle.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "bundle_version",
+    "country_id",
+    "model_package",
+    "core_package",
+    "data_package",
+    "default_dataset",
+    "datasets",
+    "certification"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": 1
+    },
+    "bundle_version": {
+      "$ref": "#/$defs/version"
+    },
+    "country_id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_-]*$"
+    },
+    "model_package": {
+      "$ref": "#/$defs/package_pin"
+    },
+    "core_package": {
+      "$ref": "#/$defs/package_pin"
+    },
+    "data_package": {
+      "$ref": "#/$defs/data_package"
+    },
+    "artifact_release": {
+      "$ref": "#/$defs/artifact_release"
+    },
+    "default_dataset": {
+      "type": "string"
+    },
+    "datasets": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/dataset_artifact"
+      }
+    },
+    "region_datasets": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/$defs/region_dataset"
+      }
+    },
+    "certification": {
+      "$ref": "#/$defs/certification"
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true
+    }
+  },
+  "$defs": {
+    "artifact_release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "repo_id",
+        "version"
+      ],
+      "properties": {
+        "repo_id": {
+          "type": "string"
+        },
+        "repo_type": {
+          "type": "string",
+          "default": "model"
+        },
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "release_manifest_uri": {
+          "type": "string"
+        },
+        "release_manifest_sha256": {
+          "$ref": "#/$defs/hash_sha256"
+        }
+      }
+    },
+    "certification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "compatibility_basis",
+        "built_with_model_package",
+        "built_with_core_package",
+        "certified_for_model_package",
+        "certified_for_core_package",
+        "certified_by"
+      ],
+      "properties": {
+        "compatibility_basis": {
+          "type": "string"
+        },
+        "data_build_id": {
+          "type": "string"
+        },
+        "data_build_fingerprint": {
+          "type": "string"
+        },
+        "built_with_model_package": {
+          "$ref": "#/$defs/package_pin"
+        },
+        "built_with_core_package": {
+          "$ref": "#/$defs/package_pin"
+        },
+        "certified_for_model_package": {
+          "$ref": "#/$defs/package_pin"
+        },
+        "certified_for_core_package": {
+          "$ref": "#/$defs/package_pin"
+        },
+        "certified_by": {
+          "type": "string"
+        }
+      }
+    },
+    "data_package": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version",
+        "repo_id"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "repo_id": {
+          "type": "string"
+        },
+        "repo_type": {
+          "type": "string",
+          "default": "model"
+        },
+        "release_manifest_path": {
+          "type": "string",
+          "default": "release_manifest.json"
+        }
+      }
+    },
+    "dataset_artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "uri",
+        "sha256"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "uri": {
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash_sha256"
+        },
+        "size_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "release_manifest_artifact_key": {
+          "type": "string"
+        },
+        "preservation_mirrors": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/preservation_mirror"
+          }
+        }
+      }
+    },
+    "hash_sha256": {
+      "type": "string",
+      "pattern": "^[a-fA-F0-9]{64}$"
+    },
+    "package_pin": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "$ref": "#/$defs/version"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash_sha256"
+        },
+        "wheel_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "git_sha": {
+          "type": "string"
+        }
+      }
+    },
+    "preservation_mirror": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "url"
+      ],
+      "properties": {
+        "kind": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "doi": {
+          "type": "string"
+        },
+        "sha256": {
+          "$ref": "#/$defs/hash_sha256"
+        },
+        "deposited_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "region_dataset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path_template"
+      ],
+      "properties": {
+        "path_template": {
+          "type": "string"
+        },
+        "uri_template": {
+          "type": "string"
+        }
+      }
+    },
+    "version": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
