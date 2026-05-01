@@ -33,10 +33,16 @@ selects already-published artifacts and certifies that they work together.
 ## Repository Layout
 
 ```text
+src/
+  policyengine_bundles/
+    models.py
+    validation.py
 schemas/
   bundle.schema.json
   country-bundle.schema.json
   validation-report.schema.json
+docs/
+  component-metadata-contract.md
 examples/
   bundles/
     example/
@@ -183,8 +189,9 @@ with an uncertified historical seed.
 Run local validation with:
 
 ```bash
-python -m pip install jsonschema ruff
+python -m pip install -e ".[dev]"
 python scripts/validate_schemas.py
+python scripts/validate_models.py
 ruff format --check .
 ruff check .
 ```
@@ -195,6 +202,12 @@ The validation script checks that:
 - every example bundle validates against `bundle.schema.json`;
 - every example country bundle validates against `country-bundle.schema.json`;
 - every example validation report validates against `validation-report.schema.json`.
+
+The model validation script checks that:
+
+- every example and release bundle loads through the canonical Pydantic models;
+- component runtime metadata payloads can be validated without component packages depending on this repository at runtime;
+- core models can export JSON Schema for downstream documentation and contract checks.
 
 ## Release Contract
 
