@@ -122,6 +122,7 @@ class DataReleaseManifest(BundleModel):
     default_datasets: dict[str, str] = Field(default_factory=dict)
     build: DataBuildInfo | None = None
     artifacts: dict[str, DataArtifact] = Field(default_factory=dict)
+    preservation_dois: list[str] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
