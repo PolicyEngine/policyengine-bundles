@@ -54,6 +54,37 @@ def validate_model_schema_export() -> None:
             raise SystemExit(f"{model.__name__} did not export JSON Schema.")
 
 
+def validate_data_release_preservation_contract() -> None:
+    manifest = DataReleaseManifest.model_validate(
+        {
+            "schema_version": 1,
+            "data_package": {
+                "name": "policyengine-us-data",
+                "version": "1.85.2",
+            },
+            "artifacts": {
+                "enhanced_cps_2024": {
+                    "kind": "microdata",
+                    "path": "enhanced_cps_2024.h5",
+                    "repo_id": "policyengine/policyengine-us-data",
+                    "revision": "1.85.2",
+                    "sha256": "a" * 64,
+                    "preservation_mirrors": [
+                        {
+                            "kind": "zenodo",
+                            "url": "https://zenodo.org/records/10000000/files/enhanced_cps_2024.h5",
+                            "doi": "10.5281/zenodo.10000000",
+                            "sha256": "a" * 64,
+                        }
+                    ],
+                }
+            },
+            "preservation_dois": ["10.5281/zenodo.10000000"],
+        }
+    )
+    assert manifest.preservation_dois == ["10.5281/zenodo.10000000"]
+
+
 def main() -> int:
     bundle_dirs = iter_bundle_dirs()
     if not bundle_dirs:
@@ -65,6 +96,9 @@ def main() -> int:
 
     validate_component_metadata_contract()
     print("component metadata model ok")
+
+    validate_data_release_preservation_contract()
+    print("data release preservation model ok")
 
     validate_model_schema_export()
     print("model schema export ok")
