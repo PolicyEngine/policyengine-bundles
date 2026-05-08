@@ -236,6 +236,8 @@ paths are not portable. Use `--testing-only` for local tests, or
 When a bundle embeds a local release manifest, that embedded file is the
 authoritative source for validation. Runtime validation does not fall back to
 the original local input path if the embedded copy is missing.
+When a bundle records a release manifest URI, that URI is authoritative even if
+a same-named file exists inside the bundle directory.
 
 2. Generate install lockfiles and hash-pinned constraints:
 

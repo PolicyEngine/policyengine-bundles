@@ -238,6 +238,39 @@ def test_validate_bundle_rejects_missing_embedded_release_manifest(
     )
 
 
+def test_validate_bundle_uses_release_manifest_uri_unless_embedded(
+    tmp_path: Path,
+) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, release_manifest())
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+    output_dir = tmp_path / "bundle"
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
+    (output_dir / "release_manifest.json").write_text("not the source manifest\n")
+
+    def fake_lock_runner(command: list[str]) -> None:
+        output_path = Path(command[command.index("--output-file") + 1])
+        output_path.write_text("# generated\n")
+
+    solve_lockfiles(output_dir, runner=fake_lock_runner)
+    report = validate_bundle(
+        output_dir,
+        runner=lambda command: None,
+        artifact_verifier=fake_artifact_verifier,
+    )
+
+    assert report.status == "passed"
+    assert any(
+        check.name == "data_release_manifest_contract" and check.status == "passed"
+        for check in report.checks
+    )
+
+
 def test_validate_bundle_fails_when_artifact_hash_mismatches(
     tmp_path: Path,
 ) -> None:

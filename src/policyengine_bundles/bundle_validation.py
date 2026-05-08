@@ -274,8 +274,19 @@ def _verify_release_manifest(
         failures.append(f"{country.country_id} missing release manifest sha256")
         return
 
-    local_manifest_path = _bundle_local_release_manifest_path(bundle, country)
-    if local_manifest_path is not None:
+    release_manifest_uri = (
+        country.artifact_release.release_manifest_uri
+        if country.artifact_release is not None
+        else None
+    )
+    if country.artifact_release is not None and release_manifest_uri is None:
+        local_manifest_path = _bundle_local_release_manifest_path(bundle, country)
+        if local_manifest_path is None:
+            failures.append(
+                f"{country.country_id} embedded release manifest missing at "
+                f"{country.data_package.release_manifest_path}"
+            )
+            return
         try:
             verification = _hash_file(local_manifest_path)
         except Exception as exc:
@@ -291,21 +302,6 @@ def _verify_release_manifest(
             )
         return
 
-    if (
-        country.artifact_release is not None
-        and country.artifact_release.release_manifest_uri is None
-    ):
-        failures.append(
-            f"{country.country_id} embedded release manifest missing at "
-            f"{country.data_package.release_manifest_path}"
-        )
-        return
-
-    release_manifest_uri = (
-        country.artifact_release.release_manifest_uri
-        if country.artifact_release is not None
-        else None
-    )
     if not isinstance(release_manifest_uri, str):
         release_manifest_uri = country.metadata.get("source_release_manifest_uri")
     if not isinstance(release_manifest_uri, str):
