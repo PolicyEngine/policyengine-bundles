@@ -42,7 +42,9 @@ src/
     validation.py
 schemas/
   bundle.schema.json
+  component-runtime-metadata.schema.json
   country-bundle.schema.json
+  data-release-manifest.schema.json
   validation-report.schema.json
 docs/
   component-metadata-contract.md
@@ -55,11 +57,16 @@ examples/
       validation-report.json
 scripts/
   generate_bundle.py
+  generate_schemas.py
   solve_lockfiles.py
   validate_bundle.py
   validate_models.py
   validate_schemas.py
 ```
+
+Schema files are generated from the Pydantic models in
+`policyengine_bundles.models`; do not hand-edit them. Run
+`python scripts/generate_schemas.py` after changing model contracts.
 
 Bundle releases and historical seeds live under:
 
@@ -242,6 +249,7 @@ Run local validation with:
 
 ```bash
 python -m pip install -e ".[dev]"
+python scripts/generate_schemas.py
 pytest
 python scripts/validate_schemas.py
 python scripts/validate_models.py
@@ -251,6 +259,7 @@ ruff check .
 
 The validation script checks that:
 
+- every committed schema was generated from the current Pydantic models;
 - every schema is a valid JSON Schema document;
 - every example bundle validates against `bundle.schema.json`;
 - every example country bundle validates against `country-bundle.schema.json`;

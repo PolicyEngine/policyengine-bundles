@@ -136,67 +136,25 @@
       ],
       "title": "PackagePin",
       "type": "object"
-    },
-    "Profile": {
-      "additionalProperties": false,
-      "properties": {
-        "constraints": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "title": "Constraints",
-          "type": "object"
-        },
-        "countries": {
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1,
-          "title": "Countries",
-          "type": "array"
-        },
-        "description": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Description"
-        },
-        "lockfiles": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "title": "Lockfiles",
-          "type": "object"
-        },
-        "packages": {
-          "items": {
-            "type": "string"
-          },
-          "minItems": 1,
-          "title": "Packages",
-          "type": "array"
-        }
-      },
-      "required": [
-        "packages",
-        "countries"
-      ],
-      "title": "Profile",
-      "type": "object"
     }
   },
-  "$id": "https://policyengine.org/schemas/policyengine-bundle.schema.json",
+  "$id": "https://policyengine.org/schemas/policyengine-component-runtime-metadata.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Top-level manifest that maps one policyengine release to certified country profiles, package pins, data manifests, and validation evidence.",
+  "description": "Dependency-free metadata emitted by component packages for bundle certification.",
   "properties": {
-    "bundle_digest": {
+    "core": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/PackagePin"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "data_build_fingerprint": {
       "anyOf": [
         {
           "type": "string"
@@ -206,21 +164,9 @@
         }
       ],
       "default": null,
-      "title": "Bundle Digest"
+      "title": "Data Build Fingerprint"
     },
-    "bundle_version": {
-      "title": "Bundle Version",
-      "type": "string"
-    },
-    "countries": {
-      "additionalProperties": {
-        "type": "string"
-      },
-      "minProperties": 1,
-      "title": "Countries",
-      "type": "object"
-    },
-    "created_at": {
+    "git_sha": {
       "anyOf": [
         {
           "type": "string"
@@ -230,51 +176,62 @@
         }
       ],
       "default": null,
-      "title": "Created At"
+      "title": "Git Sha"
     },
     "metadata": {
       "additionalProperties": true,
       "title": "Metadata",
       "type": "object"
     },
-    "packages": {
-      "additionalProperties": {
-        "$ref": "#/$defs/PackagePin"
-      },
-      "minProperties": 1,
-      "title": "Packages",
-      "type": "object"
-    },
-    "policyengine": {
-      "$ref": "#/$defs/PackagePin"
-    },
-    "profiles": {
-      "additionalProperties": {
-        "$ref": "#/$defs/Profile"
-      },
-      "minProperties": 1,
-      "title": "Profiles",
-      "type": "object"
-    },
-    "schema_version": {
-      "const": 1,
-      "title": "Schema Version",
-      "type": "integer"
-    },
-    "validation_report": {
-      "title": "Validation Report",
+    "name": {
+      "title": "Name",
       "type": "string"
+    },
+    "source_path": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Source Path"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "wheel_sha256": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Wheel Sha256"
+    },
+    "wheel_url": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Wheel Url"
     }
   },
   "required": [
-    "schema_version",
-    "bundle_version",
-    "policyengine",
-    "packages",
-    "profiles",
-    "countries",
-    "validation_report"
+    "name",
+    "version"
   ],
-  "title": "PolicyEngine bundle",
+  "title": "PolicyEngine component runtime metadata",
   "type": "object"
 }
