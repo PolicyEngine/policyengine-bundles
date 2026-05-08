@@ -21,17 +21,14 @@ def run_command(command: list[str]) -> None:
 def solve_lockfiles(
     bundle_dir: Path | str,
     *,
-    python_versions: Sequence[str] | None = None,
     runner: CommandRunner = run_command,
 ) -> None:
     bundle_root = Path(bundle_dir)
     bundle = load_bundle_directory(bundle_root)
-    resolved_python_versions = list(
-        python_versions or bundle.manifest.metadata.get("python_versions", [])
-    )
+    resolved_python_versions = list(bundle.manifest.metadata.get("python_versions", []))
     if not resolved_python_versions:
         raise ValueError(
-            "No Python versions supplied. Pass --python-version or include "
+            "No supported Python versions declared. Include "
             "metadata.python_versions in bundle.json."
         )
 

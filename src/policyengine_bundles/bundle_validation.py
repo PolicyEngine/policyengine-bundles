@@ -53,16 +53,11 @@ class RuntimeInstallTarget:
 def validate_bundle(
     bundle_dir: Path | str,
     *,
-    profiles: Sequence[str] | None = None,
-    python_versions: Sequence[str] | None = None,
     runner: CommandRunner = run_command,
     artifact_verifier: ArtifactVerifier | None = None,
 ) -> ValidationReport:
     bundle = load_bundle_directory(bundle_dir)
-    selected_profiles = _selected_profiles(
-        available_profiles=list(bundle.manifest.profiles),
-        requested_profiles=profiles,
-    )
+    selected_profiles = list(bundle.manifest.profiles)
     resolved_artifact_verifier = artifact_verifier or verify_artifact_uri
     checks: list[ValidationCheck] = []
     checks.extend(
@@ -74,10 +69,7 @@ def validate_bundle(
     )
     for profile_name in selected_profiles:
         profile = bundle.manifest.profiles[profile_name]
-        install_targets = _selected_install_targets(
-            profile=profile,
-            python_versions=python_versions,
-        )
+        install_targets = _selected_install_targets(profile=profile)
         if not install_targets:
             checks.append(
                 ValidationCheck(
@@ -89,7 +81,6 @@ def validate_bundle(
                             "Profile has no matching install targets. Run "
                             "scripts/solve_lockfiles.py before runtime validation."
                         ),
-                        "python_versions": list(python_versions or []),
                     },
                 )
             )
@@ -121,18 +112,6 @@ def validate_bundle(
     return report
 
 
-def _selected_profiles(
-    *,
-    available_profiles: Sequence[str],
-    requested_profiles: Sequence[str] | None,
-) -> list[str]:
-    selected_profiles = list(requested_profiles or available_profiles)
-    unknown_profiles = sorted(set(selected_profiles).difference(available_profiles))
-    if unknown_profiles:
-        raise ValueError(f"Unknown bundle profiles: {', '.join(unknown_profiles)}.")
-    return selected_profiles
-
-
 def current_python_platform() -> str:
     if sys.platform == "darwin":
         return "macos"
@@ -146,13 +125,10 @@ def current_python_platform() -> str:
 def _selected_install_targets(
     *,
     profile: Profile,
-    python_versions: Sequence[str] | None,
 ) -> list[tuple[str, RuntimeInstallTarget]]:
-    selected_versions = set(python_versions) if python_versions else None
     return [
         (target_key, _runtime_install_target(target))
         for target_key, target in sorted(profile.install_targets.items())
-        if (selected_versions is None or target.python_version in selected_versions)
     ]
 
 

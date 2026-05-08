@@ -203,6 +203,12 @@ adding extra release marker files. The official artifact is still the versioned
 `bundle.json` plus its referenced country manifests, lockfiles, constraints, and
 validation report.
 
+Bundle publication intentionally has one strict path: generate the bundle,
+solve every supported Python version declared in the bundle metadata, then
+validate the complete bundle. The CLI does not support partial profile or
+partial Python-version release artifacts because those can silently create
+stale or incomplete manifests.
+
 1. Generate a bundle from an explicit candidate spec:
 
 ```bash
@@ -239,6 +245,9 @@ python scripts/solve_lockfiles.py bundles/4.4.0
 
 This writes profile/Python-specific artifacts under `install/`, then records
 their relative paths back into `bundle.json` as profile `install_targets`.
+The supported Python versions come exclusively from
+`bundle.json` `metadata.python_versions`; there is no per-run Python-version
+override.
 Here, "lockfile" means an installation-resolution artifact, not a concurrency
 lock. The bundle contract assumes the exact package graph works across supported
 systems for a given Python version; validation records the platform it actually
@@ -276,7 +285,8 @@ python scripts/validate_bundle.py bundles/4.4.0
 Validation checks that certified data artifacts are reachable and match their
 declared hashes, creates clean profile environments from the generated
 constraints, verifies direct package versions, imports the profile packages, and
-runs country household smoke checks where supported. The resulting
+runs country household smoke checks where supported for every profile and every
+declared install target. The resulting
 `validation-report.json` is part of the bundle contract.
 Runtime validation records the current runner platform in check details, but
 platform-specific lockfiles are intentionally out of scope for this contract.

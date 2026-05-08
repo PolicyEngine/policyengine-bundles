@@ -60,6 +60,41 @@ def test_solve_lockfiles_records_generated_install_artifacts(tmp_path: Path) -> 
     assert "python_platforms" not in bundle.manifest.metadata
 
 
+def test_solve_lockfiles_uses_all_declared_python_versions(tmp_path: Path) -> None:
+    bundle_dir = generated_bundle(tmp_path)
+    bundle_json = bundle_dir / "bundle.json"
+    payload = json.loads(bundle_json.read_text())
+    payload["metadata"]["python_versions"] = ["3.13", "3.14"]
+    write_json(bundle_json, payload)
+    commands: list[list[str]] = []
+
+    def fake_runner(command: list[str]) -> None:
+        commands.append(command)
+        output_path = Path(command[command.index("--output-file") + 1])
+        output_path.write_text("# generated\n")
+
+    solve_lockfiles(bundle_dir, runner=fake_runner)
+
+    bundle = load_bundle_directory(bundle_dir)
+    assert set(bundle.manifest.profiles["us"].install_targets) == {"py313", "py314"}
+    assert [
+        command[command.index("--python-version") + 1]
+        for command in commands
+        if command[command.index("--format") + 1] == "requirements.txt"
+    ] == ["3.13", "3.14"]
+
+
+def test_solve_lockfiles_requires_declared_python_versions(tmp_path: Path) -> None:
+    bundle_dir = generated_bundle(tmp_path)
+    bundle_json = bundle_dir / "bundle.json"
+    payload = json.loads(bundle_json.read_text())
+    payload["metadata"]["python_versions"] = []
+    write_json(bundle_json, payload)
+
+    with pytest.raises(ValueError, match="metadata.python_versions"):
+        solve_lockfiles(bundle_dir, runner=lambda command: None)
+
+
 def test_solve_lockfiles_rejects_unknown_profile_package(tmp_path: Path) -> None:
     bundle_dir = generated_bundle(tmp_path)
     bundle_json = bundle_dir / "bundle.json"

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import pytest
 from conftest import fake_resolver, release_manifest, write_candidate, write_json
 
 from policyengine_bundles.bundle_validation import (
@@ -180,17 +179,6 @@ def test_validate_bundle_rejects_missing_embedded_release_manifest(
         )
         for check in report.checks
     )
-
-
-def test_validate_bundle_rejects_unknown_profile(tmp_path: Path) -> None:
-    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
-
-    with pytest.raises(ValueError, match="Unknown bundle profiles"):
-        validate_bundle(
-            bundle_dir,
-            profiles=["missing"],
-            artifact_verifier=fake_artifact_verifier,
-        )
 
 
 def test_validate_bundle_fails_when_artifact_hash_mismatches(
