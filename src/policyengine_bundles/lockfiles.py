@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 
 from policyengine_bundles.io import write_json
 from policyengine_bundles.models import BundleManifest, PackagePin
+from policyengine_bundles.python_versions import python_version_key
 from policyengine_bundles.validation import load_bundle_directory
 
 CommandRunner = Callable[[list[str]], None]
@@ -117,15 +118,6 @@ def _solve_install_target(
     )
 
 
-def python_version_key(python_version: str) -> str:
-    parts = python_version.split(".")
-    if len(parts) != 2 or not all(part.isdigit() for part in parts):
-        raise ValueError(
-            f"Python version must use '<major>.<minor>' form, got {python_version!r}."
-        )
-    return f"py{parts[0]}{parts[1]}"
-
-
 def _direct_requirements(
     *,
     profile_name: str,
@@ -159,8 +151,6 @@ def _clear_profile_install_artifacts(
 ) -> None:
     profile = manifest_payload["profiles"][profile_name]
     profile["install_targets"] = {}
-    profile.pop("constraints", None)
-    profile.pop("lockfiles", None)
 
 
 def _record_install_target(

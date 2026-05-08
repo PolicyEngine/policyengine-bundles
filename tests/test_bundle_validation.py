@@ -143,6 +143,45 @@ def test_validate_bundle_uses_embedded_release_manifest(
     )
 
 
+def test_validate_bundle_rejects_missing_embedded_release_manifest(
+    tmp_path: Path,
+) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, release_manifest())
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+    output_dir = tmp_path / "bundle"
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        embed_local_manifests=True,
+    )
+    embedded_manifest = output_dir / "source-manifests" / "us" / "release_manifest.json"
+    embedded_manifest.unlink()
+
+    def fake_lock_runner(command: list[str]) -> None:
+        output_path = Path(command[command.index("--output-file") + 1])
+        output_path.write_text("# generated\n")
+
+    solve_lockfiles(output_dir, runner=fake_lock_runner)
+    report = validate_bundle(
+        output_dir,
+        runner=lambda command: None,
+        artifact_verifier=fake_artifact_verifier,
+    )
+
+    assert report.status == "failed"
+    assert any(
+        check.name == "data_release_manifest_contract"
+        and check.status == "failed"
+        and any(
+            "embedded release manifest missing" in failure
+            for failure in check.details["failures"]
+        )
+        for check in report.checks
+    )
+
+
 def test_validate_bundle_rejects_unknown_profile(tmp_path: Path) -> None:
     bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
 

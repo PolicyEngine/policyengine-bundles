@@ -24,7 +24,7 @@ bundle==4.4.0
   pins country data artifact releases
   pins dataset URIs and SHA256s
   carries validation results
-  carries install lockfiles or constraints by profile and Python version
+  carries install targets by profile and Python version
 ```
 
 Country packages and data packages continue to release independently. A bundle
@@ -108,9 +108,10 @@ pip install "policyengine[uk]==4.4.0"
 pip install "policyengine[us,uk]==4.4.0"
 ```
 
-The bundle manifest is the canonical reproducibility record. Constraints and
-lockfiles are the exact install mechanisms for users who need byte-for-byte
-environment reproduction.
+The bundle manifest is the canonical reproducibility record. Install targets
+point to the profile/Python-specific constraints and lockfile artifacts used to
+recreate the certified package graph. They are not a byte-for-byte operating
+system image or container substitute.
 
 ## Demonstration: Historical 4.3.1 Seed
 
@@ -226,6 +227,9 @@ Certified bundles should use immutable remote release manifest URIs. Local
 paths are not portable. Use `--testing-only` for local tests, or
 `--embed-local-manifests` to copy local manifests into stable bundle paths under
 `source-manifests/<country>/release_manifest.json`.
+When a bundle embeds a local release manifest, that embedded file is the
+authoritative source for validation. Runtime validation does not fall back to
+the original local input path if the embedded copy is missing.
 
 2. Generate install lockfiles and hash-pinned constraints:
 
@@ -240,6 +244,29 @@ lock. The bundle contract assumes the exact package graph works across supported
 systems for a given Python version; validation records the platform it actually
 ran on as evidence, not as part of bundle identity.
 
+Each install target key must match its Python version:
+
+```json
+{
+  "profiles": {
+    "us": {
+      "install_targets": {
+        "py313": {
+          "python_version": "3.13",
+          "constraints": "install/us/py313/constraints.txt",
+          "lockfile": "install/us/py313/pylock.toml",
+          "resolver": "uv"
+        }
+      }
+    }
+  }
+}
+```
+
+New bundles should use only `install_targets`. The older profile-level
+`constraints` and `lockfiles` maps are intentionally not part of the current
+schema because they make install resolution ambiguous.
+
 3. Validate the complete bundle:
 
 ```bash
@@ -253,6 +280,9 @@ runs country household smoke checks where supported. The resulting
 `validation-report.json` is part of the bundle contract.
 Runtime validation records the current runner platform in check details, but
 platform-specific lockfiles are intentionally out of scope for this contract.
+For embedded release manifests, validation hashes the embedded file from the
+bundle directory. Missing embedded manifests fail validation instead of falling
+back to the original source URI recorded for provenance.
 
 ## Validation
 
@@ -292,5 +322,5 @@ A bundle release should not be published unless:
 - data artifact URIs are immutable/versioned;
 - certified data artifacts include SHA256 hashes;
 - country data release manifests are reachable;
-- lockfile/constraints files solve for supported Python versions;
+- profile install targets solve for supported Python versions;
 - integrated validation passes for each profile.

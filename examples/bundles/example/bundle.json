@@ -31,11 +31,13 @@
       "countries": [
         "us"
       ],
-      "lockfiles": {
-        "py313": "lockfiles/pylock.us.py313.toml"
-      },
-      "constraints": {
-        "py313": "constraints/constraints-us-py313.txt"
+      "install_targets": {
+        "py313": {
+          "python_version": "3.13",
+          "constraints": "constraints/constraints-us-py313.txt",
+          "lockfile": "lockfiles/pylock.us.py313.toml",
+          "resolver": "uv"
+        }
       }
     }
   },

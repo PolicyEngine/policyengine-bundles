@@ -169,13 +169,6 @@
     "Profile": {
       "additionalProperties": false,
       "properties": {
-        "constraints": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "title": "Constraints",
-          "type": "object"
-        },
         "countries": {
           "items": {
             "type": "string"
@@ -201,13 +194,6 @@
             "$ref": "#/$defs/InstallTarget"
           },
           "title": "Install Targets",
-          "type": "object"
-        },
-        "lockfiles": {
-          "additionalProperties": {
-            "type": "string"
-          },
-          "title": "Lockfiles",
           "type": "object"
         },
         "packages": {

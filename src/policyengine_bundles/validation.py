@@ -9,10 +9,12 @@ from policyengine_bundles.io import load_json
 from policyengine_bundles.models import (
     BundleManifest,
     CountryBundle,
+    InstallTarget,
     PackagePin,
     RuntimeComponentMetadata,
     ValidationReport,
 )
+from policyengine_bundles.python_versions import python_version_key
 
 
 def load_component_metadata(
@@ -104,6 +106,10 @@ def _validate_bundle_directory_contract(
                 f"Profile {profile_name!r} references unknown countries: "
                 f"{', '.join(sorted(missing_countries))}."
             )
+        _validate_install_targets(
+            profile_name=profile_name,
+            install_targets=profile.install_targets,
+        )
 
     for country_id, country in countries.items():
         if country.country_id != country_id:
@@ -151,3 +157,18 @@ def _validate_package_matches_manifest(
             f"Country {country_id!r} {field_name} for {package.name!r} does not "
             "match bundle.json packages entry."
         )
+
+
+def _validate_install_targets(
+    *,
+    profile_name: str,
+    install_targets: Mapping[str, InstallTarget],
+) -> None:
+    for target_key, install_target in install_targets.items():
+        expected_key = python_version_key(install_target.python_version)
+        if target_key != expected_key:
+            raise ValueError(
+                f"Profile {profile_name!r} install target key {target_key!r} "
+                f"does not match python_version {install_target.python_version!r}; "
+                f"expected {expected_key!r}."
+            )

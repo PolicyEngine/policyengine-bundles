@@ -133,22 +133,6 @@ def _selected_profiles(
     return selected_profiles
 
 
-def python_version_from_key(python_key: str) -> str:
-    if not python_key.startswith("py") or len(python_key) < 4:
-        raise ValueError(f"Invalid Python version key: {python_key!r}.")
-    version = python_key[2:]
-    return f"{version[0]}.{version[1:]}"
-
-
-def _selected_python_keys(
-    constraints: dict[str, str],
-    python_versions: Sequence[str] | None,
-) -> list[str]:
-    if python_versions is None:
-        return sorted(constraints)
-    return [f"py{version.replace('.', '')}" for version in python_versions]
-
-
 def current_python_platform() -> str:
     if sys.platform == "darwin":
         return "macos"
@@ -165,24 +149,10 @@ def _selected_install_targets(
     python_versions: Sequence[str] | None,
 ) -> list[tuple[str, RuntimeInstallTarget]]:
     selected_versions = set(python_versions) if python_versions else None
-    if profile.install_targets:
-        return [
-            (target_key, _runtime_install_target(target))
-            for target_key, target in sorted(profile.install_targets.items())
-            if (selected_versions is None or target.python_version in selected_versions)
-        ]
-
-    legacy_python_keys = _selected_python_keys(profile.constraints, python_versions)
     return [
-        (
-            python_key,
-            RuntimeInstallTarget(
-                python_version=python_version_from_key(python_key),
-                constraints=profile.constraints[python_key],
-                lockfile=profile.lockfiles.get(python_key),
-            ),
-        )
-        for python_key in legacy_python_keys
+        (target_key, _runtime_install_target(target))
+        for target_key, target in sorted(profile.install_targets.items())
+        if (selected_versions is None or target.python_version in selected_versions)
     ]
 
 
@@ -288,9 +258,19 @@ def _verify_release_manifest(
             )
         return
 
+    if (
+        country.artifact_release is not None
+        and country.artifact_release.release_manifest_uri is None
+    ):
+        failures.append(
+            f"{country.country_id} embedded release manifest missing at "
+            f"{country.data_package.release_manifest_path}"
+        )
+        return
+
     release_manifest_uri = (
         country.artifact_release.release_manifest_uri
-        if country.artifact_release
+        if country.artifact_release is not None
         else None
     )
     if not isinstance(release_manifest_uri, str):

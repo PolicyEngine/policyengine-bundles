@@ -253,8 +253,6 @@ class Profile(BundleModel):
     countries: list[str] = Field(min_length=1)
     description: str | None = None
     install_targets: dict[str, InstallTarget] = Field(default_factory=dict)
-    lockfiles: dict[str, str] = Field(default_factory=dict)
-    constraints: dict[str, str] = Field(default_factory=dict)
 
 
 class BundleManifest(BundleModel):

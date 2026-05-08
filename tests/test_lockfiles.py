@@ -38,8 +38,8 @@ def test_solve_lockfiles_records_generated_install_artifacts(tmp_path: Path) -> 
 
     bundle = load_bundle_directory(bundle_dir)
     profile_payload = bundle.manifest.profiles["us"].model_dump(exclude_none=True)
-    assert profile_payload.get("constraints", {}) == {}
-    assert profile_payload.get("lockfiles", {}) == {}
+    assert "constraints" not in profile_payload
+    assert "lockfiles" not in profile_payload
     assert profile_payload["install_targets"] == {
         "py313": {
             "python_version": "3.13",
