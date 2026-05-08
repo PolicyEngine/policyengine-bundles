@@ -30,7 +30,7 @@ def generated_bundle_with_install_artifacts(tmp_path: Path) -> Path:
         output_path = Path(command[command.index("--output-file") + 1])
         output_path.write_text("# generated\n")
 
-    solve_lockfiles(output_dir, runner=fake_lock_runner)
+    solve_lockfiles(output_dir, python_platforms=["linux"], runner=fake_lock_runner)
     return output_dir
 
 
@@ -49,6 +49,7 @@ def test_validate_bundle_runs_profile_checks(tmp_path: Path) -> None:
 
     report = validate_bundle(
         bundle_dir,
+        python_platforms=["linux"],
         runner=fake_runner,
         artifact_verifier=fake_artifact_verifier,
     )
@@ -70,6 +71,7 @@ def test_validate_bundle_reports_runtime_failure(tmp_path: Path) -> None:
 
     report = validate_bundle(
         bundle_dir,
+        python_platforms=["linux"],
         runner=failing_runner,
         artifact_verifier=fake_artifact_verifier,
     )
@@ -93,11 +95,49 @@ def test_validate_bundle_fails_without_constraints(tmp_path: Path) -> None:
         testing_only=True,
     )
 
-    report = validate_bundle(output_dir, artifact_verifier=fake_artifact_verifier)
+    report = validate_bundle(
+        output_dir,
+        python_platforms=["linux"],
+        artifact_verifier=fake_artifact_verifier,
+    )
 
     assert report.status == "failed"
     assert any(
         check.name == "install_artifacts_present" and check.status == "failed"
+        for check in report.checks
+    )
+
+
+def test_validate_bundle_uses_embedded_release_manifest(
+    tmp_path: Path,
+) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, release_manifest())
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+    output_dir = tmp_path / "bundle"
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        embed_local_manifests=True,
+    )
+    release_path.unlink()
+
+    def fake_lock_runner(command: list[str]) -> None:
+        output_path = Path(command[command.index("--output-file") + 1])
+        output_path.write_text("# generated\n")
+
+    solve_lockfiles(output_dir, python_platforms=["linux"], runner=fake_lock_runner)
+    report = validate_bundle(
+        output_dir,
+        python_platforms=["linux"],
+        runner=lambda command: None,
+        artifact_verifier=fake_artifact_verifier,
+    )
+
+    assert report.status == "passed"
+    assert any(
+        check.name == "data_release_manifest_contract" and check.status == "passed"
         for check in report.checks
     )
 
@@ -125,6 +165,7 @@ def test_validate_bundle_fails_when_artifact_hash_mismatches(
 
     report = validate_bundle(
         bundle_dir,
+        python_platforms=["linux"],
         runner=lambda command: None,
         artifact_verifier=bad_artifact_verifier,
     )
@@ -138,10 +179,11 @@ def test_validate_bundle_fails_when_artifact_hash_mismatches(
 
 def test_validate_bundle_fails_when_lockfile_missing(tmp_path: Path) -> None:
     bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
-    (bundle_dir / "lockfiles" / "pylock.us.py313.toml").unlink()
+    (bundle_dir / "install" / "us" / "linux-py313" / "pylock.toml").unlink()
 
     report = validate_bundle(
         bundle_dir,
+        python_platforms=["linux"],
         runner=lambda command: None,
         artifact_verifier=fake_artifact_verifier,
     )
@@ -155,10 +197,13 @@ def test_validate_bundle_fails_when_lockfile_missing(tmp_path: Path) -> None:
 
 def test_validate_bundle_fails_when_lockfile_is_not_toml(tmp_path: Path) -> None:
     bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
-    (bundle_dir / "lockfiles" / "pylock.us.py313.toml").write_text("not = [toml")
+    (bundle_dir / "install" / "us" / "linux-py313" / "pylock.toml").write_text(
+        "not = [toml"
+    )
 
     report = validate_bundle(
         bundle_dir,
+        python_platforms=["linux"],
         runner=lambda command: None,
         artifact_verifier=fake_artifact_verifier,
     )

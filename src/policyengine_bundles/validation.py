@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import json
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from policyengine_bundles.io import load_json
 from policyengine_bundles.models import (
     BundleManifest,
     CountryBundle,
@@ -13,11 +13,6 @@ from policyengine_bundles.models import (
     RuntimeComponentMetadata,
     ValidationReport,
 )
-
-
-def load_json(path: Path) -> dict[str, Any]:
-    with path.open() as file:
-        return json.load(file)
 
 
 def load_component_metadata(

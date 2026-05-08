@@ -11,6 +11,7 @@ from policyengine_bundles.models import (
     DataBuildInfo,
     DataPackageReference,
     DataReleaseManifest,
+    InstallTarget,
     PackageIdentity,
     PackagePin,
     Profile,
@@ -19,6 +20,7 @@ from policyengine_bundles.models import (
     ValidationCheck,
     ValidationReport,
 )
+from policyengine_bundles.references import HuggingFaceReference
 from policyengine_bundles.validation import (
     BundleDirectory,
     load_bundle_directory,
@@ -34,6 +36,8 @@ __all__ = [
     "DataBuildInfo",
     "DataPackageReference",
     "DataReleaseManifest",
+    "HuggingFaceReference",
+    "InstallTarget",
     "PackageIdentity",
     "PackagePin",
     "Profile",

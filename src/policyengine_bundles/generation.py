@@ -13,6 +13,7 @@ from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
+from policyengine_bundles.io import JsonDict, load_json, write_bytes, write_json
 from policyengine_bundles.models import (
     ArtifactRelease,
     BundleManifest,
@@ -29,9 +30,9 @@ from policyengine_bundles.models import (
     ValidationCheck,
     ValidationReport,
 )
+from policyengine_bundles.references import HuggingFaceReference
 from policyengine_bundles.validation import load_bundle_directory
 
-JsonDict = dict[str, Any]
 PackageResolver = Callable[[str, str], PackagePin]
 ManifestLoader = Callable[[str], "LoadedManifest"]
 
@@ -82,23 +83,12 @@ class LoadedManifest:
     payload: JsonDict
     uri: str
     sha256: str
+    content: bytes
     local_path: Path | None = None
     repo_id: str | None = None
     repo_type: str | None = None
     revision: str | None = None
     path: str | None = None
-
-
-def load_json(path: Path) -> JsonDict:
-    with path.open() as file:
-        return json.load(file)
-
-
-def write_json(path: Path, payload: Mapping[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w") as file:
-        json.dump(payload, file, indent=2, sort_keys=True)
-        file.write("\n")
 
 
 def _sha256_bytes(content: bytes) -> str:
@@ -145,15 +135,17 @@ def load_release_manifest_uri(uri: str) -> LoadedManifest:
             payload=json.loads(content),
             uri=uri,
             sha256=_sha256_bytes(content),
+            content=content,
             local_path=path,
         )
     if parsed.scheme == "hf":
-        hf_ref = parse_hf_uri(uri)
+        hf_ref = HuggingFaceReference.parse(uri)
         content = _read_hf_bytes(hf_ref)
         return LoadedManifest(
             payload=json.loads(content),
-            uri=uri,
+            uri=hf_ref.to_uri(),
             sha256=_sha256_bytes(content),
+            content=content,
             repo_id=hf_ref.repo_id,
             repo_type=hf_ref.repo_type,
             revision=hf_ref.revision,
@@ -162,58 +154,8 @@ def load_release_manifest_uri(uri: str) -> LoadedManifest:
     raise ValueError(f"Unsupported release manifest URI scheme: {uri!r}.")
 
 
-@dataclass(frozen=True)
-class HuggingFaceReference:
-    repo_type: str
-    repo_id: str
-    revision: str
-    path: str
-
-
-def parse_hf_uri(uri: str) -> HuggingFaceReference:
-    parsed = urllib.parse.urlparse(uri)
-    if parsed.scheme != "hf":
-        raise ValueError(f"Expected hf:// URI, got {uri!r}.")
-
-    if parsed.netloc in {"model", "dataset", "space"}:
-        repo_type = parsed.netloc
-        rest = parsed.path.lstrip("/")
-    else:
-        repo_type = "model"
-        rest = f"{parsed.netloc}{parsed.path}"
-
-    try:
-        repo_id, revision_and_path = rest.split("@", 1)
-        revision, path = revision_and_path.split("/", 1)
-    except ValueError as exc:
-        raise ValueError(
-            "HF URIs must be hf://<repo_id>@<revision>/<path> or "
-            "hf://<repo_type>/<repo_id>@<revision>/<path>."
-        ) from exc
-    if not repo_id or not revision or not path:
-        raise ValueError(f"Incomplete HF URI: {uri!r}.")
-    return HuggingFaceReference(
-        repo_type=repo_type,
-        repo_id=repo_id,
-        revision=revision,
-        path=path,
-    )
-
-
 def _read_hf_bytes(reference: HuggingFaceReference) -> bytes:
-    prefix = {
-        "model": "",
-        "dataset": "datasets/",
-        "space": "spaces/",
-    }[reference.repo_type]
-    quoted_path = "/".join(
-        urllib.parse.quote(part) for part in reference.path.split("/")
-    )
-    url = (
-        f"https://huggingface.co/{prefix}{reference.repo_id}/resolve/"
-        f"{urllib.parse.quote(reference.revision)}/{quoted_path}"
-    )
-    request = urllib.request.Request(url)
+    request = urllib.request.Request(reference.download_url())
     token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
     if token:
         request.add_header("Authorization", f"Bearer {token}")
@@ -241,7 +183,7 @@ def generate_bundle(
     created_at = _now_timestamp()
     package_pins = _resolve_package_pins(candidate, package_resolver)
     countries: dict[str, CountryBundle] = {}
-    embedded_manifest_payloads: dict[Path, JsonDict] = {}
+    embedded_manifest_payloads: dict[Path, bytes] = {}
     for country_id, candidate_country in candidate.countries.items():
         loaded_manifest = manifest_loader(candidate_country.data_release_manifest_uri)
         local_manifest_path = _local_release_manifest_output_path(
@@ -251,7 +193,7 @@ def generate_bundle(
             embed_local_manifests=embed_local_manifests,
         )
         if local_manifest_path is not None:
-            embedded_manifest_payloads[local_manifest_path] = loaded_manifest.payload
+            embedded_manifest_payloads[local_manifest_path] = loaded_manifest.content
         countries[country_id] = _build_country_bundle(
             bundle_version=candidate.bundle_version,
             country_id=country_id,
@@ -304,8 +246,8 @@ def generate_bundle(
     )
 
     write_json(output_root / "bundle.json", manifest.model_dump(exclude_none=True))
-    for relative_path, payload in embedded_manifest_payloads.items():
-        write_json(output_root / relative_path, payload)
+    for relative_path, content in embedded_manifest_payloads.items():
+        write_bytes(output_root / relative_path, content)
     for country_id, country_bundle in countries.items():
         write_json(
             output_root / "countries" / f"{country_id}.json",
@@ -378,7 +320,15 @@ def _build_country_bundle(
     )
 
     default_dataset = _default_dataset(release)
-    artifact_release = _artifact_release(release, loaded_manifest)
+    artifact_release = _artifact_release(
+        release=release,
+        loaded_manifest=loaded_manifest,
+        release_manifest_uri=(
+            None
+            if loaded_manifest.local_path is not None and release_manifest_path
+            else loaded_manifest.uri
+        ),
+    )
     data_package = DataPackageReference(
         name=release.data_package.name,
         version=release.data_package.version,
@@ -416,8 +366,8 @@ def _build_country_bundle(
             ),
         ),
         metadata={
-            "source_release_manifest_uri": loaded_manifest.uri,
-            "source_release_manifest_sha256": loaded_manifest.sha256,
+            "input_release_manifest_uri": loaded_manifest.uri,
+            "input_release_manifest_sha256": loaded_manifest.sha256,
         },
     )
 
@@ -511,8 +461,10 @@ def _default_dataset(release: DataReleaseManifest) -> str:
 
 
 def _artifact_release(
+    *,
     release: DataReleaseManifest,
     loaded_manifest: LoadedManifest,
+    release_manifest_uri: str | None,
 ) -> ArtifactRelease:
     metadata_release = release.metadata.get("artifact_release", {})
     repo_id = (
@@ -533,7 +485,7 @@ def _artifact_release(
         version=metadata_release.get("version")
         or loaded_manifest.revision
         or release.data_package.version,
-        release_manifest_uri=loaded_manifest.uri,
+        release_manifest_uri=release_manifest_uri,
         release_manifest_sha256=loaded_manifest.sha256,
     )
 

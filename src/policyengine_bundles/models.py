@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import PurePosixPath
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -9,6 +10,12 @@ class BundleModel(BaseModel):
     """Base model for strict bundle metadata contracts."""
 
     model_config = ConfigDict(extra="forbid")
+
+
+def _validate_relative_posix_path(path: str, field_name: str) -> None:
+    parsed = PurePosixPath(path)
+    if parsed.is_absolute() or ".." in parsed.parts or path in {"", "."}:
+        raise ValueError(f"{field_name} must be a bundle-relative POSIX path.")
 
 
 class PackageIdentity(BundleModel):
@@ -70,6 +77,14 @@ class DataPackageReference(BundleModel):
     repo_id: str
     repo_type: str = "model"
     release_manifest_path: str = "release_manifest.json"
+
+    @model_validator(mode="after")
+    def validate_release_manifest_path(self) -> DataPackageReference:
+        _validate_relative_posix_path(
+            self.release_manifest_path,
+            "release_manifest_path",
+        )
+        return self
 
 
 class ArtifactRelease(BundleModel):
@@ -193,6 +208,20 @@ class RegionDataset(BundleModel):
     uri_template: str | None = None
 
 
+class InstallTarget(BundleModel):
+    python_version: str
+    python_platform: str
+    constraints: str
+    lockfile: str
+    resolver: str = "uv"
+
+    @model_validator(mode="after")
+    def validate_bundle_paths(self) -> InstallTarget:
+        _validate_relative_posix_path(self.constraints, "constraints")
+        _validate_relative_posix_path(self.lockfile, "lockfile")
+        return self
+
+
 class CountryCertification(BundleModel):
     compatibility_basis: str
     built_with_model_package: PackagePin
@@ -224,6 +253,7 @@ class Profile(BundleModel):
     packages: list[str] = Field(min_length=1)
     countries: list[str] = Field(min_length=1)
     description: str | None = None
+    install_targets: dict[str, InstallTarget] = Field(default_factory=dict)
     lockfiles: dict[str, str] = Field(default_factory=dict)
     constraints: dict[str, str] = Field(default_factory=dict)
 
@@ -247,6 +277,7 @@ class ValidationCheck(BundleModel):
     profile: str | None = None
     country: str | None = None
     python_version: str | None = None
+    python_platform: str | None = None
     command: str | None = None
     started_at: str | None = None
     ended_at: str | None = None

@@ -1,5 +1,39 @@
 {
   "$defs": {
+    "InstallTarget": {
+      "additionalProperties": false,
+      "properties": {
+        "constraints": {
+          "title": "Constraints",
+          "type": "string"
+        },
+        "lockfile": {
+          "title": "Lockfile",
+          "type": "string"
+        },
+        "python_platform": {
+          "title": "Python Platform",
+          "type": "string"
+        },
+        "python_version": {
+          "title": "Python Version",
+          "type": "string"
+        },
+        "resolver": {
+          "default": "uv",
+          "title": "Resolver",
+          "type": "string"
+        }
+      },
+      "required": [
+        "python_version",
+        "python_platform",
+        "constraints",
+        "lockfile"
+      ],
+      "title": "InstallTarget",
+      "type": "object"
+    },
     "PackagePin": {
       "additionalProperties": false,
       "anyOf": [
@@ -166,6 +200,13 @@
           ],
           "default": null,
           "title": "Description"
+        },
+        "install_targets": {
+          "additionalProperties": {
+            "$ref": "#/$defs/InstallTarget"
+          },
+          "title": "Install Targets",
+          "type": "object"
         },
         "lockfiles": {
           "additionalProperties": {

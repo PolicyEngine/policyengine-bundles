@@ -77,14 +77,17 @@ bundles/
     countries/
       us.json
       uk.json
-    lockfiles/
-      pylock.us.py313.toml
-      pylock.uk.py313.toml
-      pylock.all.py313.toml
-    constraints/
-      constraints-us-py313.txt
-      constraints-uk-py313.txt
-      constraints-all-py313.txt
+    install/
+      us/
+        linux-py313/
+          constraints.txt
+          pylock.toml
+        macos-py313/
+          constraints.txt
+          pylock.toml
+        windows-py313/
+          constraints.txt
+          pylock.toml
     validation-report.json
 ```
 
@@ -218,6 +221,11 @@ package versions, supported Python versions, profiles, and country data release
 manifest URIs. Data release manifests may be loaded from `file://` paths for
 local testing or from `hf://...` references for Hugging Face artifacts. Private
 Hugging Face reads use `HF_TOKEN` or `HUGGING_FACE_HUB_TOKEN` when set.
+The canonical Hugging Face URI form is
+`hf://{repo_type}/{org}/{repo}@{revision}/{path}`, for example
+`hf://model/policyengine/policyengine-us-data@1.73.0/release_manifest.json`.
+Legacy `hf://{org}/{repo}/{path}@{revision}` references are accepted for
+historical bundle inputs and normalized by the shared reference parser.
 
 Certified bundles should use immutable remote release manifest URIs. Local
 `file://` release manifests are rejected by default because absolute filesystem
@@ -231,11 +239,12 @@ paths are not portable. Use `--testing-only` for local tests, or
 python scripts/solve_lockfiles.py bundles/4.4.0
 ```
 
-This writes profile/Python-specific artifacts under `lockfiles/` and
-`constraints/`, then records their relative paths back into `bundle.json`.
+This writes profile/platform/Python-specific artifacts under `install/`, then
+records their relative paths back into `bundle.json` as profile
+`install_targets`.
 Here, "lockfile" means an installation-resolution artifact, not a concurrency
-lock. The default target platform is Linux; pass `--python-platform` only if the
-bundle intentionally certifies another platform.
+lock. By default this solves Linux, macOS, and Windows targets. Pass
+`--python-platform` one or more times to solve only selected targets.
 
 3. Validate the complete bundle:
 
@@ -248,6 +257,9 @@ declared hashes, creates clean profile environments from the generated
 constraints, verifies direct package versions, imports the profile packages, and
 runs country household smoke checks where supported. The resulting
 `validation-report.json` is part of the bundle contract.
+Runtime validation defaults to the current runner platform. Full cross-platform
+certification should run this script on matching Linux, macOS, and Windows CI
+runners, passing `--python-platform` for the target being certified.
 
 ## Validation
 
@@ -287,5 +299,5 @@ A bundle release should not be published unless:
 - data artifact URIs are immutable/versioned;
 - certified data artifacts include SHA256 hashes;
 - country data release manifests are reachable;
-- lockfile/constraints files solve for supported Python versions;
+- lockfile/constraints files solve for supported Python versions and platforms;
 - integrated validation passes for each profile.

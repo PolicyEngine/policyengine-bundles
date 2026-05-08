@@ -3,23 +3,27 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import sys
 import tomllib
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 
-from policyengine_bundles.generation import write_json
+from policyengine_bundles.io import write_json
 from policyengine_bundles.lockfiles import CommandRunner, run_command
 from policyengine_bundles.models import (
     CountryBundle,
     DataArtifact,
+    InstallTarget,
+    Profile,
     ValidationCheck,
     ValidationReport,
 )
+from policyengine_bundles.references import HuggingFaceReference
 from policyengine_bundles.validation import BundleDirectory, load_bundle_directory
 
 IMPORT_NAMES = {
@@ -39,11 +43,20 @@ class ArtifactVerification:
 ArtifactVerifier = Callable[[str], ArtifactVerification]
 
 
+@dataclass(frozen=True)
+class RuntimeInstallTarget:
+    python_version: str
+    python_platform: str
+    constraints: str
+    lockfile: str | None
+
+
 def validate_bundle(
     bundle_dir: Path | str,
     *,
     profiles: Sequence[str] | None = None,
     python_versions: Sequence[str] | None = None,
+    python_platforms: Sequence[str] | None = None,
     runner: CommandRunner = run_command,
     artifact_verifier: ArtifactVerifier | None = None,
 ) -> ValidationReport:
@@ -63,8 +76,12 @@ def validate_bundle(
     )
     for profile_name in selected_profiles:
         profile = bundle.manifest.profiles[profile_name]
-        python_keys = _selected_python_keys(profile.constraints, python_versions)
-        if not python_keys:
+        install_targets = _selected_install_targets(
+            profile=profile,
+            python_versions=python_versions,
+            python_platforms=python_platforms,
+        )
+        if not install_targets:
             checks.append(
                 ValidationCheck(
                     name="install_artifacts_present",
@@ -72,21 +89,25 @@ def validate_bundle(
                     profile=profile_name,
                     details={
                         "reason": (
-                            "Profile has no constraints. Run "
-                            "scripts/solve_lockfiles.py before runtime validation."
-                        )
+                            "Profile has no matching install targets. Run "
+                            "scripts/solve_lockfiles.py before runtime validation, "
+                            "or select a generated Python platform."
+                        ),
+                        "python_versions": list(python_versions or []),
+                        "python_platforms": list(
+                            python_platforms or [current_python_platform()]
+                        ),
                     },
                 )
             )
             continue
-        for python_key in python_keys:
-            python_version = python_version_from_key(python_key)
+        for target_key, install_target in install_targets:
             checks.extend(
                 _validate_profile_runtime(
                     bundle=bundle,
                     profile_name=profile_name,
-                    python_key=python_key,
-                    python_version=python_version,
+                    target_key=target_key,
+                    install_target=install_target,
                     runner=runner,
                 )
             )
@@ -135,6 +156,57 @@ def _selected_python_keys(
     return [f"py{version.replace('.', '')}" for version in python_versions]
 
 
+def current_python_platform() -> str:
+    if sys.platform == "darwin":
+        return "macos"
+    if sys.platform.startswith("linux"):
+        return "linux"
+    if sys.platform.startswith(("win32", "cygwin")):
+        return "windows"
+    return sys.platform
+
+
+def _selected_install_targets(
+    *,
+    profile: Profile,
+    python_versions: Sequence[str] | None,
+    python_platforms: Sequence[str] | None,
+) -> list[tuple[str, RuntimeInstallTarget]]:
+    selected_versions = set(python_versions) if python_versions else None
+    selected_platforms = set(python_platforms or [current_python_platform()])
+    if profile.install_targets:
+        return [
+            (target_key, _runtime_install_target(target))
+            for target_key, target in sorted(profile.install_targets.items())
+            if (selected_versions is None or target.python_version in selected_versions)
+            and target.python_platform in selected_platforms
+        ]
+
+    legacy_python_keys = _selected_python_keys(profile.constraints, python_versions)
+    legacy_platform = next(iter(selected_platforms))
+    return [
+        (
+            python_key,
+            RuntimeInstallTarget(
+                python_version=python_version_from_key(python_key),
+                python_platform=legacy_platform,
+                constraints=profile.constraints[python_key],
+                lockfile=profile.lockfiles.get(python_key),
+            ),
+        )
+        for python_key in legacy_python_keys
+    ]
+
+
+def _runtime_install_target(target: InstallTarget) -> RuntimeInstallTarget:
+    return RuntimeInstallTarget(
+        python_version=target.python_version,
+        python_platform=target.python_platform,
+        constraints=target.constraints,
+        lockfile=target.lockfile,
+    )
+
+
 def _validate_data_contracts(
     bundle: BundleDirectory,
     profiles: Sequence[str],
@@ -150,12 +222,9 @@ def _validate_data_contracts(
                 failures.append(
                     f"default_dataset {country.default_dataset!r} missing from datasets"
                 )
-            _verify_source_release_manifest(
-                country_id=country_id,
-                source_release_manifest_uri=country.metadata.get(
-                    "source_release_manifest_uri"
-                ),
-                expected_sha256=country.metadata.get("source_release_manifest_sha256"),
+            _verify_release_manifest(
+                bundle=bundle,
+                country=country,
                 artifact_verifier=artifact_verifier,
                 failures=failures,
             )
@@ -199,30 +268,76 @@ def _validate_data_contracts(
     return checks
 
 
-def _verify_source_release_manifest(
+def _verify_release_manifest(
     *,
-    country_id: str,
-    source_release_manifest_uri: object,
-    expected_sha256: object,
+    bundle: BundleDirectory,
+    country: CountryBundle,
     artifact_verifier: ArtifactVerifier,
     failures: list[str],
 ) -> None:
-    if not isinstance(source_release_manifest_uri, str):
-        failures.append(f"{country_id} missing source release manifest URI")
-        return
+    expected_sha256 = (
+        country.artifact_release.release_manifest_sha256
+        if country.artifact_release
+        else country.metadata.get("input_release_manifest_sha256")
+    )
     if not isinstance(expected_sha256, str):
-        failures.append(f"{country_id} missing source release manifest sha256")
+        failures.append(f"{country.country_id} missing release manifest sha256")
+        return
+
+    local_manifest_path = _bundle_local_release_manifest_path(bundle, country)
+    if local_manifest_path is not None:
+        try:
+            verification = _hash_file(local_manifest_path)
+        except Exception as exc:
+            failures.append(
+                f"{country.country_id} embedded release manifest could not be read: "
+                f"{exc}"
+            )
+            return
+        if verification.sha256 != expected_sha256:
+            failures.append(
+                f"{country.country_id} release manifest sha256 mismatch: expected "
+                f"{expected_sha256}, got {verification.sha256}"
+            )
+        return
+
+    release_manifest_uri = (
+        country.artifact_release.release_manifest_uri
+        if country.artifact_release
+        else None
+    )
+    if not isinstance(release_manifest_uri, str):
+        release_manifest_uri = country.metadata.get("source_release_manifest_uri")
+    if not isinstance(release_manifest_uri, str):
+        release_manifest_uri = country.metadata.get("input_release_manifest_uri")
+    if not isinstance(release_manifest_uri, str):
+        failures.append(f"{country.country_id} missing release manifest URI")
         return
     try:
-        verification = artifact_verifier(source_release_manifest_uri)
+        verification = artifact_verifier(release_manifest_uri)
     except Exception as exc:
-        failures.append(f"{country_id} release manifest could not be read: {exc}")
+        failures.append(
+            f"{country.country_id} release manifest could not be read: {exc}"
+        )
         return
     if verification.sha256 != expected_sha256:
         failures.append(
-            f"{country_id} release manifest sha256 mismatch: expected "
+            f"{country.country_id} release manifest sha256 mismatch: expected "
             f"{expected_sha256}, got {verification.sha256}"
         )
+
+
+def _bundle_local_release_manifest_path(
+    bundle: BundleDirectory,
+    country: CountryBundle,
+) -> Path | None:
+    path = PurePosixPath(country.data_package.release_manifest_path)
+    if path.is_absolute() or ".." in path.parts:
+        return None
+    candidate = bundle.root.joinpath(*path.parts)
+    if candidate.exists():
+        return candidate
+    return None
 
 
 def _artifact_uri(country: CountryBundle, artifact: DataArtifact) -> str | None:
@@ -248,53 +363,36 @@ def _validate_profile_runtime(
     *,
     bundle: BundleDirectory,
     profile_name: str,
-    python_key: str,
-    python_version: str,
+    target_key: str,
+    install_target: RuntimeInstallTarget,
     runner: CommandRunner,
 ) -> list[ValidationCheck]:
     profile = bundle.manifest.profiles[profile_name]
-    constraints_path = profile.constraints.get(python_key)
-    lockfile_path = profile.lockfiles.get(python_key)
     checks: list[ValidationCheck] = []
-    if constraints_path is None:
-        return [
-            ValidationCheck(
-                name="constraints_present",
-                status="failed",
-                profile=profile_name,
-                python_version=python_version,
-                details={"missing": python_key},
-            )
-        ]
-    if lockfile_path is None:
-        checks.append(
-            ValidationCheck(
-                name="lockfile_present",
-                status="failed",
-                profile=profile_name,
-                python_version=python_version,
-                details={"missing": python_key},
-            )
+    checks.append(
+        _validate_lockfile(
+            bundle=bundle,
+            profile_name=profile_name,
+            python_version=install_target.python_version,
+            python_platform=install_target.python_platform,
+            target_key=target_key,
+            lockfile_path=install_target.lockfile,
         )
-    else:
-        checks.append(
-            _validate_lockfile(
-                bundle=bundle,
-                profile_name=profile_name,
-                python_version=python_version,
-                lockfile_path=lockfile_path,
-            )
-        )
+    )
 
-    constraints_file = bundle.root / constraints_path
+    constraints_file = bundle.root / install_target.constraints
     if not constraints_file.exists():
         checks.append(
             ValidationCheck(
                 name="constraints_present",
                 status="failed",
                 profile=profile_name,
-                python_version=python_version,
-                details={"path": constraints_path},
+                python_version=install_target.python_version,
+                python_platform=install_target.python_platform,
+                details={
+                    "target": target_key,
+                    "path": install_target.constraints,
+                },
             )
         )
         return checks
@@ -303,8 +401,9 @@ def _validate_profile_runtime(
             name="constraints_present",
             status="passed",
             profile=profile_name,
-            python_version=python_version,
-            details={"path": constraints_path},
+            python_version=install_target.python_version,
+            python_platform=install_target.python_platform,
+            details={"target": target_key, "path": install_target.constraints},
         )
     )
 
@@ -318,7 +417,7 @@ def _validate_profile_runtime(
                     "uv",
                     "venv",
                     "--python",
-                    python_version,
+                    install_target.python_version,
                     str(venv),
                 ],
             ),
@@ -365,7 +464,9 @@ def _validate_profile_runtime(
                     name=name,
                     command=command,
                     profile=profile_name,
-                    python_version=python_version,
+                    python_version=install_target.python_version,
+                    python_platform=install_target.python_platform,
+                    target_key=target_key,
                     runner=runner,
                 )
             )
@@ -377,8 +478,19 @@ def _validate_lockfile(
     bundle: BundleDirectory,
     profile_name: str,
     python_version: str,
-    lockfile_path: str,
+    python_platform: str,
+    target_key: str,
+    lockfile_path: str | None,
 ) -> ValidationCheck:
+    if lockfile_path is None:
+        return ValidationCheck(
+            name="lockfile_present",
+            status="failed",
+            profile=profile_name,
+            python_version=python_version,
+            python_platform=python_platform,
+            details={"target": target_key, "reason": "target has no lockfile"},
+        )
     path = bundle.root / lockfile_path
     if not path.exists():
         return ValidationCheck(
@@ -386,7 +498,12 @@ def _validate_lockfile(
             status="failed",
             profile=profile_name,
             python_version=python_version,
-            details={"path": lockfile_path, "reason": "lockfile does not exist"},
+            python_platform=python_platform,
+            details={
+                "target": target_key,
+                "path": lockfile_path,
+                "reason": "lockfile does not exist",
+            },
         )
     try:
         tomllib.loads(path.read_text())
@@ -396,14 +513,16 @@ def _validate_lockfile(
             status="failed",
             profile=profile_name,
             python_version=python_version,
-            details={"path": lockfile_path, "reason": str(exc)},
+            python_platform=python_platform,
+            details={"target": target_key, "path": lockfile_path, "reason": str(exc)},
         )
     return ValidationCheck(
         name="lockfile_present",
         status="passed",
         profile=profile_name,
         python_version=python_version,
-        details={"path": lockfile_path},
+        python_platform=python_platform,
+        details={"target": target_key, "path": lockfile_path},
     )
 
 
@@ -413,6 +532,8 @@ def _run_check(
     command: list[str],
     profile: str,
     python_version: str,
+    python_platform: str,
+    target_key: str,
     runner: CommandRunner,
 ) -> ValidationCheck:
     started_at = _now_timestamp()
@@ -424,19 +545,22 @@ def _run_check(
             status="failed",
             profile=profile,
             python_version=python_version,
+            python_platform=python_platform,
             command=" ".join(command),
             started_at=started_at,
             ended_at=_now_timestamp(),
-            details={"error": str(exc)},
+            details={"target": target_key, "error": str(exc)},
         )
     return ValidationCheck(
         name=name,
         status="passed",
         profile=profile,
         python_version=python_version,
+        python_platform=python_platform,
         command=" ".join(command),
         started_at=started_at,
         ended_at=_now_timestamp(),
+        details={"target": target_key},
     )
 
 
@@ -503,7 +627,7 @@ def verify_artifact_uri(uri: str) -> ArtifactVerification:
         path = Path(urllib.request.url2pathname(parsed.path))
         return _hash_file(path)
     if parsed.scheme == "hf":
-        return _hash_url(_hf_download_url(uri))
+        return _hash_url(HuggingFaceReference.parse(uri).download_url())
     raise ValueError(f"Unsupported artifact URI scheme: {uri!r}.")
 
 
@@ -529,49 +653,3 @@ def _hash_url(url: str) -> ArtifactVerification:
             digest.update(chunk)
             size_bytes += len(chunk)
     return ArtifactVerification(sha256=digest.hexdigest(), size_bytes=size_bytes)
-
-
-def _hf_download_url(uri: str) -> str:
-    parsed = urllib.parse.urlparse(uri)
-    if parsed.netloc in {"model", "dataset", "space"}:
-        repo_type = parsed.netloc
-        rest = parsed.path.lstrip("/")
-    else:
-        repo_type = "model"
-        rest = f"{parsed.netloc}{parsed.path}"
-
-    repo_id, revision, path = _parse_hf_reference_parts(rest)
-    prefix = {
-        "model": "",
-        "dataset": "datasets/",
-        "space": "spaces/",
-    }[repo_type]
-    quoted_path = "/".join(urllib.parse.quote(part) for part in path.split("/"))
-    return (
-        f"https://huggingface.co/{prefix}{repo_id}/resolve/"
-        f"{urllib.parse.quote(revision)}/{quoted_path}"
-    )
-
-
-def _parse_hf_reference_parts(rest: str) -> tuple[str, str, str]:
-    if "@" not in rest:
-        raise ValueError(
-            "HF URIs must include an immutable revision, for example "
-            "hf://model/org/repo@version/path."
-        )
-
-    repo_id, revision_and_path = rest.split("@", 1)
-    if "/" in revision_and_path:
-        revision, path = revision_and_path.split("/", 1)
-        if repo_id and revision and path:
-            return repo_id, revision, path
-
-    repo_and_path, revision = rest.rsplit("@", 1)
-    parts = repo_and_path.split("/")
-    if len(parts) < 3:
-        raise ValueError("Legacy HF URIs must use hf://org/repo/path@revision form.")
-    repo_id = "/".join(parts[:2])
-    path = "/".join(parts[2:])
-    if not repo_id or not revision or not path:
-        raise ValueError(f"Incomplete HF URI reference: {rest!r}.")
-    return repo_id, revision, path

@@ -240,3 +240,8 @@ def test_generate_bundle_embeds_local_manifest_when_requested(
         bundle.countries["us"].data_package.release_manifest_path
         == "source-manifests/us/release_manifest.json"
     )
+    assert bundle.countries["us"].artifact_release.release_manifest_uri is None
+    assert (
+        bundle.countries["us"].metadata["input_release_manifest_uri"]
+        == release_path.as_uri()
+    )
