@@ -248,6 +248,8 @@ their relative paths back into `bundle.json` as profile `install_targets`.
 The supported Python versions come exclusively from
 `bundle.json` `metadata.python_versions`; there is no per-run Python-version
 override.
+Runtime validation requires every profile to contain exactly one install target
+for each declared Python version, with no missing or undeclared targets.
 Here, "lockfile" means an installation-resolution artifact, not a concurrency
 lock. The bundle contract assumes the exact package graph works across supported
 systems for a given Python version; validation records the platform it actually

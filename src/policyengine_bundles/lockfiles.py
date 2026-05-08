@@ -8,7 +8,10 @@ from tempfile import TemporaryDirectory
 
 from policyengine_bundles.io import write_json
 from policyengine_bundles.models import BundleManifest, PackagePin
-from policyengine_bundles.python_versions import python_version_key
+from policyengine_bundles.python_versions import (
+    metadata_python_versions,
+    python_version_key,
+)
 from policyengine_bundles.validation import load_bundle_directory
 
 CommandRunner = Callable[[list[str]], None]
@@ -25,7 +28,7 @@ def solve_lockfiles(
 ) -> None:
     bundle_root = Path(bundle_dir)
     bundle = load_bundle_directory(bundle_root)
-    resolved_python_versions = list(bundle.manifest.metadata.get("python_versions", []))
+    resolved_python_versions = metadata_python_versions(bundle.manifest.metadata)
     if not resolved_python_versions:
         raise ValueError(
             "No supported Python versions declared. Include "

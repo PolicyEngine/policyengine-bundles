@@ -141,3 +141,29 @@ def test_load_bundle_directory_rejects_legacy_profile_install_artifacts(
 
     with pytest.raises(ValueError, match="Extra inputs are not permitted"):
         load_bundle_directory(bundle_dir)
+
+
+def test_load_bundle_directory_rejects_unsafe_country_manifest_path(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle(tmp_path)
+    bundle_json = bundle_dir / "bundle.json"
+    payload = json.loads(bundle_json.read_text())
+    payload["countries"]["us"] = "../countries/us.json"
+    write_json(bundle_json, payload)
+
+    with pytest.raises(ValueError, match="bundle-relative POSIX path"):
+        load_bundle_directory(bundle_dir)
+
+
+def test_load_bundle_directory_rejects_unsafe_validation_report_path(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle(tmp_path)
+    bundle_json = bundle_dir / "bundle.json"
+    payload = json.loads(bundle_json.read_text())
+    payload["validation_report"] = "/tmp/validation-report.json"
+    write_json(bundle_json, payload)
+
+    with pytest.raises(ValueError, match="bundle-relative POSIX path"):
+        load_bundle_directory(bundle_dir)

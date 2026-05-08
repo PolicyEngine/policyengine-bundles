@@ -44,5 +44,10 @@
   "countries": {
     "us": "countries/us.json"
   },
+  "metadata": {
+    "python_versions": [
+      "3.13"
+    ]
+  },
   "validation_report": "validation-report.json"
 }

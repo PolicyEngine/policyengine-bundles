@@ -23,6 +23,10 @@ from policyengine_bundles.models import (
     ValidationCheck,
     ValidationReport,
 )
+from policyengine_bundles.python_versions import (
+    metadata_python_versions,
+    python_version_key_map,
+)
 from policyengine_bundles.references import HuggingFaceReference
 from policyengine_bundles.validation import BundleDirectory, load_bundle_directory
 
@@ -69,22 +73,15 @@ def validate_bundle(
     )
     for profile_name in selected_profiles:
         profile = bundle.manifest.profiles[profile_name]
-        install_targets = _selected_install_targets(profile=profile)
-        if not install_targets:
-            checks.append(
-                ValidationCheck(
-                    name="install_artifacts_present",
-                    status="failed",
-                    profile=profile_name,
-                    details={
-                        "reason": (
-                            "Profile has no matching install targets. Run "
-                            "scripts/solve_lockfiles.py before runtime validation."
-                        ),
-                    },
-                )
-            )
+        install_target_coverage = _validate_install_target_coverage(
+            bundle=bundle,
+            profile_name=profile_name,
+            profile=profile,
+        )
+        checks.append(install_target_coverage)
+        if install_target_coverage.status == "failed":
             continue
+        install_targets = _selected_install_targets(profile=profile)
         for target_key, install_target in install_targets:
             checks.extend(
                 _validate_profile_runtime(
@@ -130,6 +127,66 @@ def _selected_install_targets(
         (target_key, _runtime_install_target(target))
         for target_key, target in sorted(profile.install_targets.items())
     ]
+
+
+def _validate_install_target_coverage(
+    *,
+    bundle: BundleDirectory,
+    profile_name: str,
+    profile: Profile,
+) -> ValidationCheck:
+    declared_python_versions = metadata_python_versions(bundle.manifest.metadata)
+    if declared_python_versions is None:
+        return ValidationCheck(
+            name="install_targets_complete",
+            status="failed",
+            profile=profile_name,
+            details={
+                "reason": (
+                    "Bundle metadata.python_versions is required before runtime "
+                    "validation."
+                )
+            },
+        )
+
+    expected_targets = python_version_key_map(
+        declared_python_versions,
+        field_name="metadata.python_versions",
+    )
+    expected_keys = set(expected_targets)
+    actual_keys = set(profile.install_targets)
+    missing_keys = sorted(expected_keys.difference(actual_keys))
+    extra_keys = sorted(actual_keys.difference(expected_keys))
+    failures: list[str] = []
+    if missing_keys:
+        failures.append(
+            "missing install targets for declared Python versions: "
+            + ", ".join(
+                f"{target_key} ({expected_targets[target_key]})"
+                for target_key in missing_keys
+            )
+        )
+    if extra_keys:
+        failures.append(
+            "install targets are not declared in metadata.python_versions: "
+            + ", ".join(extra_keys)
+        )
+
+    return ValidationCheck(
+        name="install_targets_complete",
+        status="failed" if failures else "passed",
+        profile=profile_name,
+        details={
+            "declared_python_versions": declared_python_versions,
+            "install_targets": sorted(actual_keys),
+            "failures": failures,
+        }
+        if failures
+        else {
+            "declared_python_versions": declared_python_versions,
+            "install_targets": sorted(actual_keys),
+        },
+    )
 
 
 def _runtime_install_target(target: InstallTarget) -> RuntimeInstallTarget:

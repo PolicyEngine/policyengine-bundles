@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any
 
 from policyengine_bundles.io import load_json
@@ -14,7 +14,10 @@ from policyengine_bundles.models import (
     RuntimeComponentMetadata,
     ValidationReport,
 )
-from policyengine_bundles.python_versions import python_version_key
+from policyengine_bundles.python_versions import (
+    metadata_python_versions,
+    python_version_key,
+)
 
 
 def load_component_metadata(
@@ -43,6 +46,7 @@ def load_bundle_directory(bundle_dir: Path | str) -> BundleDirectory:
 
     root = Path(bundle_dir)
     manifest = BundleManifest.model_validate(load_json(root / "bundle.json"))
+    _validate_bundle_manifest_paths(manifest)
     validation_report = ValidationReport.model_validate(
         load_json(root / manifest.validation_report)
     )
@@ -84,6 +88,7 @@ def _validate_bundle_directory_contract(
             f"{manifest.bundle_version!r}."
         )
 
+    declared_python_versions = metadata_python_versions(manifest.metadata)
     for profile_name, profile in manifest.profiles.items():
         missing_packages = [
             package_name
@@ -109,6 +114,7 @@ def _validate_bundle_directory_contract(
         _validate_install_targets(
             profile_name=profile_name,
             install_targets=profile.install_targets,
+            declared_python_versions=declared_python_versions,
         )
 
     for country_id, country in countries.items():
@@ -163,7 +169,13 @@ def _validate_install_targets(
     *,
     profile_name: str,
     install_targets: Mapping[str, InstallTarget],
+    declared_python_versions: list[str] | None,
 ) -> None:
+    if install_targets and declared_python_versions is None:
+        raise ValueError(
+            f"Profile {profile_name!r} install_targets require "
+            "bundle metadata.python_versions."
+        )
     for target_key, install_target in install_targets.items():
         expected_key = python_version_key(install_target.python_version)
         if target_key != expected_key:
@@ -172,3 +184,18 @@ def _validate_install_targets(
                 f"does not match python_version {install_target.python_version!r}; "
                 f"expected {expected_key!r}."
             )
+
+
+def _validate_bundle_manifest_paths(manifest: BundleManifest) -> None:
+    for country_id, manifest_path in manifest.countries.items():
+        _validate_relative_posix_path(
+            manifest_path,
+            f"countries[{country_id!r}]",
+        )
+    _validate_relative_posix_path(manifest.validation_report, "validation_report")
+
+
+def _validate_relative_posix_path(path: str, field_name: str) -> None:
+    parsed = PurePosixPath(path)
+    if parsed.is_absolute() or ".." in parsed.parts or path in {"", "."}:
+        raise ValueError(f"{field_name} must be a bundle-relative POSIX path.")

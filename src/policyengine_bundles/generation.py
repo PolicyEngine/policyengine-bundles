@@ -30,6 +30,7 @@ from policyengine_bundles.models import (
     ValidationCheck,
     ValidationReport,
 )
+from policyengine_bundles.python_versions import python_version_key_map
 from policyengine_bundles.references import HuggingFaceReference
 from policyengine_bundles.validation import load_bundle_directory
 
@@ -46,7 +47,7 @@ class BundleCandidate(BundleModel):
     schema_version: Literal[1]
     bundle_version: str
     policyengine_version: str
-    python_versions: list[str] = Field(default_factory=list)
+    python_versions: list[str] = Field(min_length=1)
     profiles: list[str]
     packages: dict[str, str]
     countries: dict[str, CandidateCountry]
@@ -64,6 +65,10 @@ class BundleCandidate(BundleModel):
             raise ValueError("Candidate must include at least one country.")
         if not self.profiles:
             raise ValueError("Candidate must include at least one profile.")
+        python_version_key_map(
+            self.python_versions,
+            field_name="candidate python_versions",
+        )
         for country_id, country in self.countries.items():
             if country.model_package not in self.packages:
                 raise ValueError(

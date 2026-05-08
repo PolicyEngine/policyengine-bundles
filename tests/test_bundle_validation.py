@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from conftest import fake_resolver, release_manifest, write_candidate, write_json
@@ -104,7 +105,63 @@ def test_validate_bundle_fails_without_constraints(tmp_path: Path) -> None:
 
     assert report.status == "failed"
     assert any(
-        check.name == "install_artifacts_present" and check.status == "failed"
+        check.name == "install_targets_complete" and check.status == "failed"
+        for check in report.checks
+    )
+
+
+def test_validate_bundle_fails_when_install_target_missing_for_declared_python(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+    bundle_json = bundle_dir / "bundle.json"
+    payload = json.loads(bundle_json.read_text())
+    payload["metadata"]["python_versions"] = ["3.13", "3.14"]
+    write_json(bundle_json, payload)
+
+    report = validate_bundle(
+        bundle_dir,
+        runner=lambda command: None,
+        artifact_verifier=fake_artifact_verifier,
+    )
+
+    assert report.status == "failed"
+    assert any(
+        check.name == "install_targets_complete"
+        and check.status == "failed"
+        and any(
+            "missing install targets" in failure
+            for failure in check.details["failures"]
+        )
+        for check in report.checks
+    )
+
+
+def test_validate_bundle_fails_when_install_target_not_declared(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+    bundle_json = bundle_dir / "bundle.json"
+    payload = json.loads(bundle_json.read_text())
+    payload["profiles"]["us"]["install_targets"]["py314"] = {
+        "python_version": "3.14",
+        "constraints": "install/us/py313/constraints.txt",
+        "lockfile": "install/us/py313/pylock.toml",
+        "resolver": "uv",
+    }
+    write_json(bundle_json, payload)
+
+    report = validate_bundle(
+        bundle_dir,
+        runner=lambda command: None,
+        artifact_verifier=fake_artifact_verifier,
+    )
+
+    assert report.status == "failed"
+    assert any(
+        check.name == "install_targets_complete"
+        and check.status == "failed"
+        and any("not declared" in failure for failure in check.details["failures"])
         for check in report.checks
     )
 

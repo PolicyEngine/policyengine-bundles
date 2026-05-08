@@ -139,6 +139,40 @@ def test_generate_bundle_rejects_policyengine_version_drift(
         )
 
 
+def test_generate_bundle_rejects_missing_python_versions(tmp_path: Path) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, release_manifest())
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+    payload = json.loads(candidate_path.read_text())
+    payload["python_versions"] = []
+    write_json(candidate_path, payload)
+
+    with pytest.raises(ValueError, match="at least 1 item"):
+        generate_bundle(
+            candidate_path,
+            tmp_path / "bundle",
+            package_resolver=fake_resolver,
+            testing_only=True,
+        )
+
+
+def test_generate_bundle_rejects_invalid_python_version(tmp_path: Path) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, release_manifest())
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+    payload = json.loads(candidate_path.read_text())
+    payload["python_versions"] = ["3"]
+    write_json(candidate_path, payload)
+
+    with pytest.raises(ValueError, match="Python version must use"):
+        generate_bundle(
+            candidate_path,
+            tmp_path / "bundle",
+            package_resolver=fake_resolver,
+            testing_only=True,
+        )
+
+
 def test_generate_bundle_rejects_core_mismatch(tmp_path: Path) -> None:
     release_path = tmp_path / "us-release-manifest.json"
     write_json(release_path, release_manifest(core_version="3.25.0"))
