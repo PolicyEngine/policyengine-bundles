@@ -41,7 +41,10 @@ def test_solve_lockfiles_records_generated_install_artifacts(tmp_path: Path) -> 
     assert len(commands) == 2
     assert commands[0][0:3] == ["uv", "pip", "compile"]
     assert "--generate-hashes" in commands[0]
+    assert commands[0][commands[0].index("--python-platform") + 1] == "linux"
+    assert commands[1][commands[1].index("--python-platform") + 1] == "linux"
     assert commands[1][commands[1].index("--format") + 1] == "pylock.toml"
+    assert bundle.manifest.metadata["python_platform"] == "linux"
 
 
 def test_solve_lockfiles_rejects_unknown_profile_package(tmp_path: Path) -> None:

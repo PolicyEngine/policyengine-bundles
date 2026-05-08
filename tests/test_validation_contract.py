@@ -56,3 +56,30 @@ def test_load_bundle_directory_rejects_report_version_drift(
 
     with pytest.raises(ValueError, match="Validation report bundle_version"):
         load_bundle_directory(bundle_dir)
+
+
+def test_load_bundle_directory_rejects_policyengine_version_drift(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle(tmp_path)
+    bundle_json = bundle_dir / "bundle.json"
+    payload = json.loads(bundle_json.read_text())
+    payload["policyengine"]["version"] = "4.4.1"
+    payload["packages"]["policyengine"]["version"] = "4.4.1"
+    write_json(bundle_json, payload)
+
+    with pytest.raises(ValueError, match="does not match bundle_version"):
+        load_bundle_directory(bundle_dir)
+
+
+def test_load_bundle_directory_rejects_policyengine_package_pin_drift(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle(tmp_path)
+    bundle_json = bundle_dir / "bundle.json"
+    payload = json.loads(bundle_json.read_text())
+    payload["packages"]["policyengine"]["sha256"] = "d" * 64
+    write_json(bundle_json, payload)
+
+    with pytest.raises(ValueError, match="policyengine pin must match"):
+        load_bundle_directory(bundle_dir)

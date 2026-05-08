@@ -5,7 +5,11 @@ from pathlib import Path
 import pytest
 from conftest import fake_resolver, release_manifest, write_candidate, write_json
 
-from policyengine_bundles.bundle_validation import validate_bundle
+from policyengine_bundles.bundle_validation import (
+    ArtifactVerification,
+    validate_bundle,
+    verify_artifact_uri,
+)
 from policyengine_bundles.generation import generate_bundle
 from policyengine_bundles.lockfiles import solve_lockfiles
 
@@ -25,6 +29,12 @@ def generated_bundle_with_install_artifacts(tmp_path: Path) -> Path:
     return output_dir
 
 
+def fake_artifact_verifier(uri: str) -> ArtifactVerification:
+    if uri.startswith("file://"):
+        return verify_artifact_uri(uri)
+    return ArtifactVerification(sha256="c" * 64, size_bytes=12)
+
+
 def test_validate_bundle_runs_profile_checks(tmp_path: Path) -> None:
     bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
     commands: list[list[str]] = []
@@ -32,7 +42,11 @@ def test_validate_bundle_runs_profile_checks(tmp_path: Path) -> None:
     def fake_runner(command: list[str]) -> None:
         commands.append(command)
 
-    report = validate_bundle(bundle_dir, runner=fake_runner)
+    report = validate_bundle(
+        bundle_dir,
+        runner=fake_runner,
+        artifact_verifier=fake_artifact_verifier,
+    )
 
     assert report.status == "passed"
     check_names = {check.name for check in report.checks}
@@ -49,7 +63,11 @@ def test_validate_bundle_reports_runtime_failure(tmp_path: Path) -> None:
         if command[0] != "uv":
             raise RuntimeError("boom")
 
-    report = validate_bundle(bundle_dir, runner=failing_runner)
+    report = validate_bundle(
+        bundle_dir,
+        runner=failing_runner,
+        artifact_verifier=fake_artifact_verifier,
+    )
 
     assert report.status == "failed"
     assert any(
@@ -65,7 +83,7 @@ def test_validate_bundle_fails_without_constraints(tmp_path: Path) -> None:
     output_dir = tmp_path / "bundle"
     generate_bundle(candidate_path, output_dir, package_resolver=fake_resolver)
 
-    report = validate_bundle(output_dir)
+    report = validate_bundle(output_dir, artifact_verifier=fake_artifact_verifier)
 
     assert report.status == "failed"
     assert any(
@@ -78,4 +96,65 @@ def test_validate_bundle_rejects_unknown_profile(tmp_path: Path) -> None:
     bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
 
     with pytest.raises(ValueError, match="Unknown bundle profiles"):
-        validate_bundle(bundle_dir, profiles=["missing"])
+        validate_bundle(
+            bundle_dir,
+            profiles=["missing"],
+            artifact_verifier=fake_artifact_verifier,
+        )
+
+
+def test_validate_bundle_fails_when_artifact_hash_mismatches(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+
+    def bad_artifact_verifier(uri: str) -> ArtifactVerification:
+        if uri.startswith("file://"):
+            return verify_artifact_uri(uri)
+        return ArtifactVerification(sha256="d" * 64, size_bytes=12)
+
+    report = validate_bundle(
+        bundle_dir,
+        runner=lambda command: None,
+        artifact_verifier=bad_artifact_verifier,
+    )
+
+    assert report.status == "failed"
+    assert any(
+        check.name == "data_release_manifest_contract" and check.status == "failed"
+        for check in report.checks
+    )
+
+
+def test_validate_bundle_fails_when_lockfile_missing(tmp_path: Path) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+    (bundle_dir / "lockfiles" / "pylock.us.py313.toml").unlink()
+
+    report = validate_bundle(
+        bundle_dir,
+        runner=lambda command: None,
+        artifact_verifier=fake_artifact_verifier,
+    )
+
+    assert report.status == "failed"
+    assert any(
+        check.name == "lockfile_present" and check.status == "failed"
+        for check in report.checks
+    )
+
+
+def test_validate_bundle_fails_when_lockfile_is_not_toml(tmp_path: Path) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+    (bundle_dir / "lockfiles" / "pylock.us.py313.toml").write_text("not = [toml")
+
+    report = validate_bundle(
+        bundle_dir,
+        runner=lambda command: None,
+        artifact_verifier=fake_artifact_verifier,
+    )
+
+    assert report.status == "failed"
+    assert any(
+        check.name == "lockfile_present" and check.status == "failed"
+        for check in report.checks
+    )

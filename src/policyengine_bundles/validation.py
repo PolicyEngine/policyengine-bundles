@@ -67,6 +67,19 @@ def _validate_bundle_directory_contract(
     countries: Mapping[str, CountryBundle],
     validation_report: ValidationReport,
 ) -> None:
+    if "policyengine" not in manifest.packages:
+        raise ValueError("Bundle packages must include policyengine.")
+    if manifest.policyengine.model_dump(exclude_none=True) != manifest.packages[
+        "policyengine"
+    ].model_dump(exclude_none=True):
+        raise ValueError("Bundle policyengine pin must match packages['policyengine'].")
+    if manifest.policyengine.version != manifest.bundle_version:
+        raise ValueError(
+            "Bundle policyengine version "
+            f"{manifest.policyengine.version!r} does not match bundle_version "
+            f"{manifest.bundle_version!r}."
+        )
+
     if validation_report.bundle_version != manifest.bundle_version:
         raise ValueError(
             "Validation report bundle_version "

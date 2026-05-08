@@ -3,7 +3,7 @@ from __future__ import annotations
 import argparse
 from pathlib import Path
 
-from policyengine_bundles.lockfiles import solve_lockfiles
+from policyengine_bundles.lockfiles import DEFAULT_PYTHON_PLATFORM, solve_lockfiles
 
 
 def main() -> int:
@@ -20,8 +20,20 @@ def main() -> int:
             "Defaults to bundle.json metadata.python_versions."
         ),
     )
+    parser.add_argument(
+        "--python-platform",
+        default=DEFAULT_PYTHON_PLATFORM,
+        help=(
+            "uv target platform for generated constraints and lockfiles. "
+            f"Defaults to {DEFAULT_PYTHON_PLATFORM!r}."
+        ),
+    )
     args = parser.parse_args()
-    solve_lockfiles(args.bundle_dir, python_versions=args.python_versions)
+    solve_lockfiles(
+        args.bundle_dir,
+        python_versions=args.python_versions,
+        python_platform=args.python_platform,
+    )
     return 0
 
 

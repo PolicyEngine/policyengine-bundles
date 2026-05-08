@@ -1,15 +1,25 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import os
-from collections.abc import Sequence
+import tomllib
+import urllib.parse
+import urllib.request
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from policyengine_bundles.generation import write_json
 from policyengine_bundles.lockfiles import CommandRunner, run_command
-from policyengine_bundles.models import ValidationCheck, ValidationReport
+from policyengine_bundles.models import (
+    CountryBundle,
+    DataArtifact,
+    ValidationCheck,
+    ValidationReport,
+)
 from policyengine_bundles.validation import BundleDirectory, load_bundle_directory
 
 IMPORT_NAMES = {
@@ -20,20 +30,37 @@ IMPORT_NAMES = {
 }
 
 
+@dataclass(frozen=True)
+class ArtifactVerification:
+    sha256: str
+    size_bytes: int
+
+
+ArtifactVerifier = Callable[[str], ArtifactVerification]
+
+
 def validate_bundle(
     bundle_dir: Path | str,
     *,
     profiles: Sequence[str] | None = None,
     python_versions: Sequence[str] | None = None,
     runner: CommandRunner = run_command,
+    artifact_verifier: ArtifactVerifier | None = None,
 ) -> ValidationReport:
     bundle = load_bundle_directory(bundle_dir)
     selected_profiles = _selected_profiles(
         available_profiles=list(bundle.manifest.profiles),
         requested_profiles=profiles,
     )
+    resolved_artifact_verifier = artifact_verifier or verify_artifact_uri
     checks: list[ValidationCheck] = []
-    checks.extend(_validate_data_contracts(bundle, selected_profiles))
+    checks.extend(
+        _validate_data_contracts(
+            bundle=bundle,
+            profiles=selected_profiles,
+            artifact_verifier=resolved_artifact_verifier,
+        )
+    )
     for profile_name in selected_profiles:
         profile = bundle.manifest.profiles[profile_name]
         python_keys = _selected_python_keys(profile.constraints, python_versions)
@@ -111,6 +138,7 @@ def _selected_python_keys(
 def _validate_data_contracts(
     bundle: BundleDirectory,
     profiles: Sequence[str],
+    artifact_verifier: ArtifactVerifier,
 ) -> list[ValidationCheck]:
     checks: list[ValidationCheck] = []
     for profile_name in profiles:
@@ -122,9 +150,43 @@ def _validate_data_contracts(
                 failures.append(
                     f"default_dataset {country.default_dataset!r} missing from datasets"
                 )
+            _verify_source_release_manifest(
+                country_id=country_id,
+                source_release_manifest_uri=country.metadata.get(
+                    "source_release_manifest_uri"
+                ),
+                expected_sha256=country.metadata.get("source_release_manifest_sha256"),
+                artifact_verifier=artifact_verifier,
+                failures=failures,
+            )
             for artifact_key, artifact in country.datasets.items():
                 if artifact.status == "certified" and not artifact.sha256:
                     failures.append(f"{artifact_key} missing sha256")
+                    continue
+                if artifact.status != "certified":
+                    continue
+                artifact_uri = _artifact_uri(country, artifact)
+                if artifact_uri is None:
+                    failures.append(f"{artifact_key} missing artifact URI")
+                    continue
+                try:
+                    verification = artifact_verifier(artifact_uri)
+                except Exception as exc:
+                    failures.append(f"{artifact_key} could not be read: {exc}")
+                    continue
+                if verification.sha256 != artifact.sha256:
+                    failures.append(
+                        f"{artifact_key} sha256 mismatch: expected "
+                        f"{artifact.sha256}, got {verification.sha256}"
+                    )
+                if (
+                    artifact.size_bytes is not None
+                    and verification.size_bytes != artifact.size_bytes
+                ):
+                    failures.append(
+                        f"{artifact_key} size mismatch: expected "
+                        f"{artifact.size_bytes}, got {verification.size_bytes}"
+                    )
             checks.append(
                 ValidationCheck(
                     name="data_release_manifest_contract",
@@ -135,6 +197,51 @@ def _validate_data_contracts(
                 )
             )
     return checks
+
+
+def _verify_source_release_manifest(
+    *,
+    country_id: str,
+    source_release_manifest_uri: object,
+    expected_sha256: object,
+    artifact_verifier: ArtifactVerifier,
+    failures: list[str],
+) -> None:
+    if not isinstance(source_release_manifest_uri, str):
+        failures.append(f"{country_id} missing source release manifest URI")
+        return
+    if not isinstance(expected_sha256, str):
+        failures.append(f"{country_id} missing source release manifest sha256")
+        return
+    try:
+        verification = artifact_verifier(source_release_manifest_uri)
+    except Exception as exc:
+        failures.append(f"{country_id} release manifest could not be read: {exc}")
+        return
+    if verification.sha256 != expected_sha256:
+        failures.append(
+            f"{country_id} release manifest sha256 mismatch: expected "
+            f"{expected_sha256}, got {verification.sha256}"
+        )
+
+
+def _artifact_uri(country: CountryBundle, artifact: DataArtifact) -> str | None:
+    if artifact.uri:
+        return artifact.uri
+    if artifact.path and artifact.repo_id and artifact.revision:
+        repo_type = (
+            artifact.metadata.get("repo_type")
+            or (
+                country.artifact_release.repo_type
+                if country.artifact_release
+                else country.data_package.repo_type
+            )
+            or "model"
+        )
+        return (
+            f"hf://{repo_type}/{artifact.repo_id}@{artifact.revision}/{artifact.path}"
+        )
+    return None
 
 
 def _validate_profile_runtime(
@@ -171,12 +278,11 @@ def _validate_profile_runtime(
         )
     else:
         checks.append(
-            ValidationCheck(
-                name="lockfile_present",
-                status="passed",
-                profile=profile_name,
+            _validate_lockfile(
+                bundle=bundle,
+                profile_name=profile_name,
                 python_version=python_version,
-                details={"path": lockfile_path},
+                lockfile_path=lockfile_path,
             )
         )
 
@@ -264,6 +370,41 @@ def _validate_profile_runtime(
                 )
             )
     return checks
+
+
+def _validate_lockfile(
+    *,
+    bundle: BundleDirectory,
+    profile_name: str,
+    python_version: str,
+    lockfile_path: str,
+) -> ValidationCheck:
+    path = bundle.root / lockfile_path
+    if not path.exists():
+        return ValidationCheck(
+            name="lockfile_present",
+            status="failed",
+            profile=profile_name,
+            python_version=python_version,
+            details={"path": lockfile_path, "reason": "lockfile does not exist"},
+        )
+    try:
+        tomllib.loads(path.read_text())
+    except tomllib.TOMLDecodeError as exc:
+        return ValidationCheck(
+            name="lockfile_present",
+            status="failed",
+            profile=profile_name,
+            python_version=python_version,
+            details={"path": lockfile_path, "reason": str(exc)},
+        )
+    return ValidationCheck(
+        name="lockfile_present",
+        status="passed",
+        profile=profile_name,
+        python_version=python_version,
+        details={"path": lockfile_path},
+    )
 
 
 def _run_check(
@@ -354,3 +495,83 @@ def _now_timestamp() -> str:
 
 def _is_windows() -> bool:
     return os.name == "nt"
+
+
+def verify_artifact_uri(uri: str) -> ArtifactVerification:
+    parsed = urllib.parse.urlparse(uri)
+    if parsed.scheme == "file":
+        path = Path(urllib.request.url2pathname(parsed.path))
+        return _hash_file(path)
+    if parsed.scheme == "hf":
+        return _hash_url(_hf_download_url(uri))
+    raise ValueError(f"Unsupported artifact URI scheme: {uri!r}.")
+
+
+def _hash_file(path: Path) -> ArtifactVerification:
+    digest = hashlib.sha256()
+    size_bytes = 0
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+            size_bytes += len(chunk)
+    return ArtifactVerification(sha256=digest.hexdigest(), size_bytes=size_bytes)
+
+
+def _hash_url(url: str) -> ArtifactVerification:
+    digest = hashlib.sha256()
+    size_bytes = 0
+    request = urllib.request.Request(url)
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    if token and "huggingface.co" in urllib.parse.urlparse(url).netloc:
+        request.add_header("Authorization", f"Bearer {token}")
+    with urllib.request.urlopen(request, timeout=300) as response:
+        while chunk := response.read(1024 * 1024):
+            digest.update(chunk)
+            size_bytes += len(chunk)
+    return ArtifactVerification(sha256=digest.hexdigest(), size_bytes=size_bytes)
+
+
+def _hf_download_url(uri: str) -> str:
+    parsed = urllib.parse.urlparse(uri)
+    if parsed.netloc in {"model", "dataset", "space"}:
+        repo_type = parsed.netloc
+        rest = parsed.path.lstrip("/")
+    else:
+        repo_type = "model"
+        rest = f"{parsed.netloc}{parsed.path}"
+
+    repo_id, revision, path = _parse_hf_reference_parts(rest)
+    prefix = {
+        "model": "",
+        "dataset": "datasets/",
+        "space": "spaces/",
+    }[repo_type]
+    quoted_path = "/".join(urllib.parse.quote(part) for part in path.split("/"))
+    return (
+        f"https://huggingface.co/{prefix}{repo_id}/resolve/"
+        f"{urllib.parse.quote(revision)}/{quoted_path}"
+    )
+
+
+def _parse_hf_reference_parts(rest: str) -> tuple[str, str, str]:
+    if "@" not in rest:
+        raise ValueError(
+            "HF URIs must include an immutable revision, for example "
+            "hf://model/org/repo@version/path."
+        )
+
+    repo_id, revision_and_path = rest.split("@", 1)
+    if "/" in revision_and_path:
+        revision, path = revision_and_path.split("/", 1)
+        if repo_id and revision and path:
+            return repo_id, revision, path
+
+    repo_and_path, revision = rest.rsplit("@", 1)
+    parts = repo_and_path.split("/")
+    if len(parts) < 3:
+        raise ValueError("Legacy HF URIs must use hf://org/repo/path@revision form.")
+    repo_id = "/".join(parts[:2])
+    path = "/".join(parts[2:])
+    if not repo_id or not revision or not path:
+        raise ValueError(f"Incomplete HF URI reference: {rest!r}.")
+    return repo_id, revision, path

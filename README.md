@@ -221,7 +221,8 @@ python scripts/solve_lockfiles.py bundles/4.4.0
 This writes profile/Python-specific artifacts under `lockfiles/` and
 `constraints/`, then records their relative paths back into `bundle.json`.
 Here, "lockfile" means an installation-resolution artifact, not a concurrency
-lock.
+lock. The default target platform is Linux; pass `--python-platform` only if the
+bundle intentionally certifies another platform.
 
 3. Validate the complete bundle:
 
@@ -229,11 +230,11 @@ lock.
 python scripts/validate_bundle.py bundles/4.4.0
 ```
 
-Validation checks that certified data artifacts have hashes, creates clean
-profile environments from the generated constraints, verifies direct package
-versions, imports the profile packages, and runs country household smoke checks
-where supported. The resulting `validation-report.json` is part of the bundle
-contract.
+Validation checks that certified data artifacts are reachable and match their
+declared hashes, creates clean profile environments from the generated
+constraints, verifies direct package versions, imports the profile packages, and
+runs country household smoke checks where supported. The resulting
+`validation-report.json` is part of the bundle contract.
 
 ## Validation
 

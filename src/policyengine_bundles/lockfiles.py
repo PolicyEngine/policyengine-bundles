@@ -11,6 +11,7 @@ from policyengine_bundles.models import BundleManifest, PackagePin
 from policyengine_bundles.validation import load_bundle_directory
 
 CommandRunner = Callable[[list[str]], None]
+DEFAULT_PYTHON_PLATFORM = "linux"
 
 
 def run_command(command: list[str]) -> None:
@@ -21,6 +22,7 @@ def solve_lockfiles(
     bundle_dir: Path | str,
     *,
     python_versions: Sequence[str] | None = None,
+    python_platform: str = DEFAULT_PYTHON_PLATFORM,
     runner: CommandRunner = run_command,
 ) -> None:
     bundle_root = Path(bundle_dir)
@@ -64,6 +66,8 @@ def solve_lockfiles(
                         str(requirements_path),
                         "--python-version",
                         python_version,
+                        "--python-platform",
+                        python_platform,
                         "--format",
                         "requirements.txt",
                         "--generate-hashes",
@@ -79,6 +83,8 @@ def solve_lockfiles(
                         str(requirements_path),
                         "--python-version",
                         python_version,
+                        "--python-platform",
+                        python_platform,
                         "--format",
                         "pylock.toml",
                         "--output-file",
@@ -93,6 +99,7 @@ def solve_lockfiles(
                 lockfile_path=lockfile_path.relative_to(bundle_root),
             )
 
+    manifest_payload.setdefault("metadata", {})["python_platform"] = python_platform
     BundleManifest.model_validate(manifest_payload)
     write_json(bundle_root / "bundle.json", manifest_payload)
     load_bundle_directory(bundle_root)

@@ -152,3 +152,33 @@ def test_generate_bundle_rejects_certified_artifact_without_sha(tmp_path: Path) 
             tmp_path / "bundle",
             package_resolver=fake_resolver,
         )
+
+
+def test_generate_bundle_rejects_missing_build_metadata(tmp_path: Path) -> None:
+    payload = copy.deepcopy(release_manifest())
+    payload.pop("build")
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, payload)
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+
+    with pytest.raises(ValueError, match="must record build metadata"):
+        generate_bundle(
+            candidate_path,
+            tmp_path / "bundle",
+            package_resolver=fake_resolver,
+        )
+
+
+def test_generate_bundle_rejects_missing_core_build_metadata(tmp_path: Path) -> None:
+    payload = copy.deepcopy(release_manifest())
+    payload["build"].pop("built_with_core_package")
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, payload)
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+
+    with pytest.raises(ValueError, match="built_with_core_package"):
+        generate_bundle(
+            candidate_path,
+            tmp_path / "bundle",
+            package_resolver=fake_resolver,
+        )

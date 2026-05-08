@@ -20,10 +20,12 @@ from policyengine_bundles.models import (
     CountryBundle,
     CountryCertification,
     DataArtifact,
+    DataBuildInfo,
     DataPackageReference,
     DataReleaseManifest,
     PackagePin,
     Profile,
+    RuntimeComponentMetadata,
     ValidationCheck,
     ValidationReport,
 )
@@ -331,21 +333,30 @@ def _build_country_bundle(
     release = DataReleaseManifest.model_validate(loaded_manifest.payload)
     model_package = packages[country.model_package]
     core_package = packages["policyengine-core"]
+    build = _require_build_metadata(release)
+    built_with_model_package = _require_exact_build_package(
+        release=release,
+        package=build.built_with_model_package,
+        field_name="built_with_model_package",
+    )
+    built_with_core_package = _require_exact_build_package(
+        release=release,
+        package=build.built_with_core_package,
+        field_name="built_with_core_package",
+    )
     _validate_release_supports_package(
         release=release,
         package_name=model_package.name,
         version=model_package.version or "",
         compatible_packages=release.compatible_model_packages,
-        build_metadata=release.build.built_with_model_package
-        if release.build
-        else None,
+        build_metadata=built_with_model_package,
     )
     _validate_release_supports_package(
         release=release,
         package_name=core_package.name,
         version=core_package.version or "",
         compatible_packages=release.compatible_core_packages,
-        build_metadata=release.build.built_with_core_package if release.build else None,
+        build_metadata=built_with_core_package,
     )
 
     default_dataset = _default_dataset(release)
@@ -355,9 +366,8 @@ def _build_country_bundle(
         version=release.data_package.version,
         repo_id=artifact_release.repo_id,
         repo_type=artifact_release.repo_type,
-        release_manifest_path=loaded_manifest.path or "release_manifest.json",
+        release_manifest_path=_release_manifest_path(loaded_manifest),
     )
-    build = release.build
     return CountryBundle(
         schema_version=1,
         bundle_version=bundle_version,
@@ -371,20 +381,18 @@ def _build_country_bundle(
         certification=CountryCertification(
             compatibility_basis="release_manifest_exact_compatibility",
             built_with_model_package=_metadata_to_package_pin(
-                build.built_with_model_package if build else None,
-                fallback=model_package,
+                built_with_model_package,
             ),
             built_with_core_package=_metadata_to_package_pin(
-                build.built_with_core_package if build else None,
-                fallback=core_package,
+                built_with_core_package,
             ),
             certified_for_model_package=model_package,
             certified_for_core_package=core_package,
             certified_by="policyengine-bundles generator",
-            data_build_id=build.build_id if build else None,
+            data_build_id=build.build_id,
             data_build_fingerprint=(
-                build.built_with_model_package.data_build_fingerprint
-                if build and build.built_with_model_package
+                built_with_model_package.data_build_fingerprint
+                if hasattr(built_with_model_package, "data_build_fingerprint")
                 else None
             ),
         ),
@@ -393,6 +401,40 @@ def _build_country_bundle(
             "source_release_manifest_sha256": loaded_manifest.sha256,
         },
     )
+
+
+def _require_build_metadata(release: DataReleaseManifest) -> DataBuildInfo:
+    if release.build is None:
+        raise ValueError(
+            f"{release.data_package.name}=={release.data_package.version} must "
+            "record build metadata for bundle certification."
+        )
+    return release.build
+
+
+def _require_exact_build_package(
+    *,
+    release: DataReleaseManifest,
+    package: RuntimeComponentMetadata | PackagePin | None,
+    field_name: str,
+) -> RuntimeComponentMetadata | PackagePin:
+    if package is None:
+        raise ValueError(
+            f"{release.data_package.name}=={release.data_package.version} must "
+            f"record {field_name} for bundle certification."
+        )
+    if package.version is None:
+        raise ValueError(
+            f"{release.data_package.name}=={release.data_package.version} "
+            f"{field_name} must record an exact version."
+        )
+    return package
+
+
+def _release_manifest_path(loaded_manifest: LoadedManifest) -> str:
+    if loaded_manifest.repo_id and loaded_manifest.path:
+        return loaded_manifest.path
+    return "release_manifest.json"
 
 
 def _validate_release_supports_package(
@@ -464,9 +506,9 @@ def _first_artifact_repo_id(artifacts: Mapping[str, DataArtifact]) -> str | None
     return None
 
 
-def _metadata_to_package_pin(metadata: Any, *, fallback: PackagePin) -> PackagePin:
-    if metadata is None:
-        return fallback
+def _metadata_to_package_pin(
+    metadata: RuntimeComponentMetadata | PackagePin,
+) -> PackagePin:
     if isinstance(metadata, PackagePin):
         return metadata
     return PackagePin(
