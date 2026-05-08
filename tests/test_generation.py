@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+import json
 from pathlib import Path
 
 import pytest
@@ -16,7 +17,12 @@ def test_generate_bundle_from_candidate(tmp_path: Path) -> None:
     candidate_path = write_candidate(tmp_path, release_path.as_uri())
     output_dir = tmp_path / "bundle"
 
-    generate_bundle(candidate_path, output_dir, package_resolver=fake_resolver)
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
 
     bundle = load_bundle_directory(output_dir)
     assert bundle.manifest.bundle_version == "4.4.0"
@@ -70,7 +76,12 @@ def test_generate_bundle_supports_all_profile(tmp_path: Path) -> None:
     )
     output_dir = tmp_path / "bundle"
 
-    generate_bundle(candidate_path, output_dir, package_resolver=fake_resolver)
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
 
     bundle = load_bundle_directory(output_dir)
     assert bundle.manifest.profiles["all"].packages == [
@@ -90,6 +101,7 @@ def test_generate_bundle_rejects_unsupported_manifest_uri(tmp_path: Path) -> Non
             candidate_path,
             tmp_path / "bundle",
             package_resolver=fake_resolver,
+            testing_only=True,
         )
 
 
@@ -123,6 +135,7 @@ def test_generate_bundle_rejects_policyengine_version_drift(
             candidate_path,
             tmp_path / "bundle",
             package_resolver=fake_resolver,
+            testing_only=True,
         )
 
 
@@ -136,6 +149,7 @@ def test_generate_bundle_rejects_core_mismatch(tmp_path: Path) -> None:
             candidate_path,
             tmp_path / "bundle",
             package_resolver=fake_resolver,
+            testing_only=True,
         )
 
 
@@ -151,6 +165,7 @@ def test_generate_bundle_rejects_certified_artifact_without_sha(tmp_path: Path) 
             candidate_path,
             tmp_path / "bundle",
             package_resolver=fake_resolver,
+            testing_only=True,
         )
 
 
@@ -166,6 +181,7 @@ def test_generate_bundle_rejects_missing_build_metadata(tmp_path: Path) -> None:
             candidate_path,
             tmp_path / "bundle",
             package_resolver=fake_resolver,
+            testing_only=True,
         )
 
 
@@ -181,4 +197,46 @@ def test_generate_bundle_rejects_missing_core_build_metadata(tmp_path: Path) -> 
             candidate_path,
             tmp_path / "bundle",
             package_resolver=fake_resolver,
+            testing_only=True,
         )
+
+
+def test_generate_bundle_rejects_local_manifest_for_certified_bundle(
+    tmp_path: Path,
+) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, release_manifest())
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+
+    with pytest.raises(ValueError, match="Local file release manifests"):
+        generate_bundle(
+            candidate_path,
+            tmp_path / "bundle",
+            package_resolver=fake_resolver,
+        )
+
+
+def test_generate_bundle_embeds_local_manifest_when_requested(
+    tmp_path: Path,
+) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    payload = release_manifest()
+    write_json(release_path, payload)
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+    output_dir = tmp_path / "bundle"
+
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        embed_local_manifests=True,
+    )
+
+    embedded_path = output_dir / "source-manifests" / "us" / "release_manifest.json"
+    bundle = load_bundle_directory(output_dir)
+    assert embedded_path.exists()
+    assert json.loads(embedded_path.read_text()) == json.loads(release_path.read_text())
+    assert (
+        bundle.countries["us"].data_package.release_manifest_path
+        == "source-manifests/us/release_manifest.json"
+    )

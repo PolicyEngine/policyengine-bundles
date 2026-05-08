@@ -15,7 +15,12 @@ def generated_bundle(tmp_path: Path) -> Path:
     write_json(release_path, release_manifest())
     candidate_path = write_candidate(tmp_path, release_path.as_uri())
     output_dir = tmp_path / "bundle"
-    generate_bundle(candidate_path, output_dir, package_resolver=fake_resolver)
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
     return output_dir
 
 

@@ -82,6 +82,7 @@ class LoadedManifest:
     payload: JsonDict
     uri: str
     sha256: str
+    local_path: Path | None = None
     repo_id: str | None = None
     repo_type: str | None = None
     revision: str | None = None
@@ -144,7 +145,7 @@ def load_release_manifest_uri(uri: str) -> LoadedManifest:
             payload=json.loads(content),
             uri=uri,
             sha256=_sha256_bytes(content),
-            path=str(path),
+            local_path=path,
         )
     if parsed.scheme == "hf":
         hf_ref = parse_hf_uri(uri)
@@ -227,6 +228,8 @@ def generate_bundle(
     package_resolver: PackageResolver = resolve_pypi_package,
     manifest_loader: ManifestLoader = load_release_manifest_uri,
     force: bool = False,
+    testing_only: bool = False,
+    embed_local_manifests: bool = False,
 ) -> None:
     candidate = BundleCandidate.model_validate(load_json(Path(candidate_path)))
     output_root = Path(output_dir)
@@ -237,18 +240,30 @@ def generate_bundle(
 
     created_at = _now_timestamp()
     package_pins = _resolve_package_pins(candidate, package_resolver)
-    countries = {
-        country_id: _build_country_bundle(
+    countries: dict[str, CountryBundle] = {}
+    embedded_manifest_payloads: dict[Path, JsonDict] = {}
+    for country_id, candidate_country in candidate.countries.items():
+        loaded_manifest = manifest_loader(candidate_country.data_release_manifest_uri)
+        local_manifest_path = _local_release_manifest_output_path(
+            country_id=country_id,
+            loaded_manifest=loaded_manifest,
+            testing_only=testing_only,
+            embed_local_manifests=embed_local_manifests,
+        )
+        if local_manifest_path is not None:
+            embedded_manifest_payloads[local_manifest_path] = loaded_manifest.payload
+        countries[country_id] = _build_country_bundle(
             bundle_version=candidate.bundle_version,
             country_id=country_id,
             country=candidate_country,
             packages=package_pins,
-            loaded_manifest=manifest_loader(
-                candidate_country.data_release_manifest_uri
+            loaded_manifest=loaded_manifest,
+            release_manifest_path=(
+                local_manifest_path.as_posix()
+                if local_manifest_path is not None
+                else None
             ),
         )
-        for country_id, candidate_country in candidate.countries.items()
-    }
     _validate_core_agreement(package_pins, countries)
 
     validation_report = ValidationReport(
@@ -284,11 +299,13 @@ def generate_bundle(
         metadata={
             "python_versions": candidate.python_versions,
             "generated_by": "scripts/generate_bundle.py",
-            "testing_only": True,
+            "testing_only": testing_only,
         },
     )
 
     write_json(output_root / "bundle.json", manifest.model_dump(exclude_none=True))
+    for relative_path, payload in embedded_manifest_payloads.items():
+        write_json(output_root / relative_path, payload)
     for country_id, country_bundle in countries.items():
         write_json(
             output_root / "countries" / f"{country_id}.json",
@@ -329,6 +346,7 @@ def _build_country_bundle(
     country: CandidateCountry,
     packages: Mapping[str, PackagePin],
     loaded_manifest: LoadedManifest,
+    release_manifest_path: str | None,
 ) -> CountryBundle:
     release = DataReleaseManifest.model_validate(loaded_manifest.payload)
     model_package = packages[country.model_package]
@@ -366,7 +384,8 @@ def _build_country_bundle(
         version=release.data_package.version,
         repo_id=artifact_release.repo_id,
         repo_type=artifact_release.repo_type,
-        release_manifest_path=_release_manifest_path(loaded_manifest),
+        release_manifest_path=release_manifest_path
+        or _release_manifest_path(loaded_manifest),
     )
     return CountryBundle(
         schema_version=1,
@@ -429,6 +448,26 @@ def _require_exact_build_package(
             f"{field_name} must record an exact version."
         )
     return package
+
+
+def _local_release_manifest_output_path(
+    *,
+    country_id: str,
+    loaded_manifest: LoadedManifest,
+    testing_only: bool,
+    embed_local_manifests: bool,
+) -> Path | None:
+    if loaded_manifest.local_path is None:
+        return None
+    if embed_local_manifests:
+        return Path("source-manifests") / country_id / "release_manifest.json"
+    if testing_only:
+        return None
+    raise ValueError(
+        "Local file release manifests are only allowed with testing_only=True "
+        "or embed_local_manifests=True. Certified bundles should use immutable "
+        "remote release manifest URIs."
+    )
 
 
 def _release_manifest_path(loaded_manifest: LoadedManifest) -> str:

@@ -19,7 +19,12 @@ def generated_bundle_with_install_artifacts(tmp_path: Path) -> Path:
     write_json(release_path, release_manifest())
     candidate_path = write_candidate(tmp_path, release_path.as_uri())
     output_dir = tmp_path / "bundle"
-    generate_bundle(candidate_path, output_dir, package_resolver=fake_resolver)
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
 
     def fake_lock_runner(command: list[str]) -> None:
         output_path = Path(command[command.index("--output-file") + 1])
@@ -81,7 +86,12 @@ def test_validate_bundle_fails_without_constraints(tmp_path: Path) -> None:
     write_json(release_path, release_manifest())
     candidate_path = write_candidate(tmp_path, release_path.as_uri())
     output_dir = tmp_path / "bundle"
-    generate_bundle(candidate_path, output_dir, package_resolver=fake_resolver)
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
 
     report = validate_bundle(output_dir, artifact_verifier=fake_artifact_verifier)
 

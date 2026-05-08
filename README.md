@@ -219,6 +219,12 @@ manifest URIs. Data release manifests may be loaded from `file://` paths for
 local testing or from `hf://...` references for Hugging Face artifacts. Private
 Hugging Face reads use `HF_TOKEN` or `HUGGING_FACE_HUB_TOKEN` when set.
 
+Certified bundles should use immutable remote release manifest URIs. Local
+`file://` release manifests are rejected by default because absolute filesystem
+paths are not portable. Use `--testing-only` for local tests, or
+`--embed-local-manifests` to copy local manifests into stable bundle paths under
+`source-manifests/<country>/release_manifest.json`.
+
 2. Generate install lockfiles and hash-pinned constraints:
 
 ```bash

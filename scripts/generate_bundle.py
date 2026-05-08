@@ -17,8 +17,27 @@ def main() -> int:
         action="store_true",
         help="Overwrite an existing non-empty output directory.",
     )
+    parser.add_argument(
+        "--testing-only",
+        action="store_true",
+        help="Allow local file release manifests without embedding them.",
+    )
+    parser.add_argument(
+        "--embed-local-manifests",
+        action="store_true",
+        help=(
+            "Copy local file release manifests into source-manifests/<country>/ "
+            "and reference those stable relative paths."
+        ),
+    )
     args = parser.parse_args()
-    generate_bundle(args.input, args.output, force=args.force)
+    generate_bundle(
+        args.input,
+        args.output,
+        force=args.force,
+        testing_only=args.testing_only,
+        embed_local_manifests=args.embed_local_manifests,
+    )
     return 0
 
 
