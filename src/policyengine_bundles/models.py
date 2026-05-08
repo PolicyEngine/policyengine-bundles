@@ -210,7 +210,6 @@ class RegionDataset(BundleModel):
 
 class InstallTarget(BundleModel):
     python_version: str
-    python_platform: str
     constraints: str
     lockfile: str
     resolver: str = "uv"
@@ -277,7 +276,6 @@ class ValidationCheck(BundleModel):
     profile: str | None = None
     country: str | None = None
     python_version: str | None = None
-    python_platform: str | None = None
     command: str | None = None
     started_at: str | None = None
     ended_at: str | None = None

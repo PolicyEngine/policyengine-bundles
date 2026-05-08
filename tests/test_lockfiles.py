@@ -41,41 +41,23 @@ def test_solve_lockfiles_records_generated_install_artifacts(tmp_path: Path) -> 
     assert profile_payload.get("constraints", {}) == {}
     assert profile_payload.get("lockfiles", {}) == {}
     assert profile_payload["install_targets"] == {
-        "linux-py313": {
+        "py313": {
             "python_version": "3.13",
-            "python_platform": "linux",
-            "constraints": "install/us/linux-py313/constraints.txt",
-            "lockfile": "install/us/linux-py313/pylock.toml",
-            "resolver": "uv",
-        },
-        "macos-py313": {
-            "python_version": "3.13",
-            "python_platform": "macos",
-            "constraints": "install/us/macos-py313/constraints.txt",
-            "lockfile": "install/us/macos-py313/pylock.toml",
-            "resolver": "uv",
-        },
-        "windows-py313": {
-            "python_version": "3.13",
-            "python_platform": "windows",
-            "constraints": "install/us/windows-py313/constraints.txt",
-            "lockfile": "install/us/windows-py313/pylock.toml",
+            "constraints": "install/us/py313/constraints.txt",
+            "lockfile": "install/us/py313/pylock.toml",
             "resolver": "uv",
         },
     }
-    assert len(commands) == 6
+    assert len(commands) == 2
     assert commands[0][0:3] == ["uv", "pip", "compile"]
     assert "--generate-hashes" in commands[0]
-    assert commands[0][commands[0].index("--python-platform") + 1] == "linux"
-    assert commands[1][commands[1].index("--python-platform") + 1] == "linux"
+    assert "--python-platform" not in commands[0]
+    assert "--python-platform" not in commands[1]
     assert commands[1][commands[1].index("--format") + 1] == "pylock.toml"
-    assert commands[2][commands[2].index("--python-platform") + 1] == "macos"
-    assert commands[4][commands[4].index("--python-platform") + 1] == "windows"
-    assert bundle.manifest.metadata["python_platforms"] == [
-        "linux",
-        "macos",
-        "windows",
-    ]
+    assert bundle.manifest.metadata["install_artifact_layout"] == (
+        "install/{profile}/{python}/"
+    )
+    assert "python_platforms" not in bundle.manifest.metadata
 
 
 def test_solve_lockfiles_rejects_unknown_profile_package(tmp_path: Path) -> None:

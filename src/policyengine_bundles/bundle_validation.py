@@ -46,7 +46,6 @@ ArtifactVerifier = Callable[[str], ArtifactVerification]
 @dataclass(frozen=True)
 class RuntimeInstallTarget:
     python_version: str
-    python_platform: str
     constraints: str
     lockfile: str | None
 
@@ -56,7 +55,6 @@ def validate_bundle(
     *,
     profiles: Sequence[str] | None = None,
     python_versions: Sequence[str] | None = None,
-    python_platforms: Sequence[str] | None = None,
     runner: CommandRunner = run_command,
     artifact_verifier: ArtifactVerifier | None = None,
 ) -> ValidationReport:
@@ -79,7 +77,6 @@ def validate_bundle(
         install_targets = _selected_install_targets(
             profile=profile,
             python_versions=python_versions,
-            python_platforms=python_platforms,
         )
         if not install_targets:
             checks.append(
@@ -90,13 +87,9 @@ def validate_bundle(
                     details={
                         "reason": (
                             "Profile has no matching install targets. Run "
-                            "scripts/solve_lockfiles.py before runtime validation, "
-                            "or select a generated Python platform."
+                            "scripts/solve_lockfiles.py before runtime validation."
                         ),
                         "python_versions": list(python_versions or []),
-                        "python_platforms": list(
-                            python_platforms or [current_python_platform()]
-                        ),
                     },
                 )
             )
@@ -170,26 +163,21 @@ def _selected_install_targets(
     *,
     profile: Profile,
     python_versions: Sequence[str] | None,
-    python_platforms: Sequence[str] | None,
 ) -> list[tuple[str, RuntimeInstallTarget]]:
     selected_versions = set(python_versions) if python_versions else None
-    selected_platforms = set(python_platforms or [current_python_platform()])
     if profile.install_targets:
         return [
             (target_key, _runtime_install_target(target))
             for target_key, target in sorted(profile.install_targets.items())
             if (selected_versions is None or target.python_version in selected_versions)
-            and target.python_platform in selected_platforms
         ]
 
     legacy_python_keys = _selected_python_keys(profile.constraints, python_versions)
-    legacy_platform = next(iter(selected_platforms))
     return [
         (
             python_key,
             RuntimeInstallTarget(
                 python_version=python_version_from_key(python_key),
-                python_platform=legacy_platform,
                 constraints=profile.constraints[python_key],
                 lockfile=profile.lockfiles.get(python_key),
             ),
@@ -201,7 +189,6 @@ def _selected_install_targets(
 def _runtime_install_target(target: InstallTarget) -> RuntimeInstallTarget:
     return RuntimeInstallTarget(
         python_version=target.python_version,
-        python_platform=target.python_platform,
         constraints=target.constraints,
         lockfile=target.lockfile,
     )
@@ -374,7 +361,6 @@ def _validate_profile_runtime(
             bundle=bundle,
             profile_name=profile_name,
             python_version=install_target.python_version,
-            python_platform=install_target.python_platform,
             target_key=target_key,
             lockfile_path=install_target.lockfile,
         )
@@ -388,10 +374,10 @@ def _validate_profile_runtime(
                 status="failed",
                 profile=profile_name,
                 python_version=install_target.python_version,
-                python_platform=install_target.python_platform,
                 details={
                     "target": target_key,
                     "path": install_target.constraints,
+                    "validated_on_platform": current_python_platform(),
                 },
             )
         )
@@ -402,8 +388,11 @@ def _validate_profile_runtime(
             status="passed",
             profile=profile_name,
             python_version=install_target.python_version,
-            python_platform=install_target.python_platform,
-            details={"target": target_key, "path": install_target.constraints},
+            details={
+                "target": target_key,
+                "path": install_target.constraints,
+                "validated_on_platform": current_python_platform(),
+            },
         )
     )
 
@@ -465,7 +454,6 @@ def _validate_profile_runtime(
                     command=command,
                     profile=profile_name,
                     python_version=install_target.python_version,
-                    python_platform=install_target.python_platform,
                     target_key=target_key,
                     runner=runner,
                 )
@@ -478,18 +466,21 @@ def _validate_lockfile(
     bundle: BundleDirectory,
     profile_name: str,
     python_version: str,
-    python_platform: str,
     target_key: str,
     lockfile_path: str | None,
 ) -> ValidationCheck:
+    validated_on_platform = current_python_platform()
     if lockfile_path is None:
         return ValidationCheck(
             name="lockfile_present",
             status="failed",
             profile=profile_name,
             python_version=python_version,
-            python_platform=python_platform,
-            details={"target": target_key, "reason": "target has no lockfile"},
+            details={
+                "target": target_key,
+                "reason": "target has no lockfile",
+                "validated_on_platform": validated_on_platform,
+            },
         )
     path = bundle.root / lockfile_path
     if not path.exists():
@@ -498,11 +489,11 @@ def _validate_lockfile(
             status="failed",
             profile=profile_name,
             python_version=python_version,
-            python_platform=python_platform,
             details={
                 "target": target_key,
                 "path": lockfile_path,
                 "reason": "lockfile does not exist",
+                "validated_on_platform": validated_on_platform,
             },
         )
     try:
@@ -513,16 +504,23 @@ def _validate_lockfile(
             status="failed",
             profile=profile_name,
             python_version=python_version,
-            python_platform=python_platform,
-            details={"target": target_key, "path": lockfile_path, "reason": str(exc)},
+            details={
+                "target": target_key,
+                "path": lockfile_path,
+                "reason": str(exc),
+                "validated_on_platform": validated_on_platform,
+            },
         )
     return ValidationCheck(
         name="lockfile_present",
         status="passed",
         profile=profile_name,
         python_version=python_version,
-        python_platform=python_platform,
-        details={"target": target_key, "path": lockfile_path},
+        details={
+            "target": target_key,
+            "path": lockfile_path,
+            "validated_on_platform": validated_on_platform,
+        },
     )
 
 
@@ -532,11 +530,11 @@ def _run_check(
     command: list[str],
     profile: str,
     python_version: str,
-    python_platform: str,
     target_key: str,
     runner: CommandRunner,
 ) -> ValidationCheck:
     started_at = _now_timestamp()
+    validated_on_platform = current_python_platform()
     try:
         runner(command)
     except Exception as exc:
@@ -545,22 +543,27 @@ def _run_check(
             status="failed",
             profile=profile,
             python_version=python_version,
-            python_platform=python_platform,
             command=" ".join(command),
             started_at=started_at,
             ended_at=_now_timestamp(),
-            details={"target": target_key, "error": str(exc)},
+            details={
+                "target": target_key,
+                "validated_on_platform": validated_on_platform,
+                "error": str(exc),
+            },
         )
     return ValidationCheck(
         name=name,
         status="passed",
         profile=profile,
         python_version=python_version,
-        python_platform=python_platform,
         command=" ".join(command),
         started_at=started_at,
         ended_at=_now_timestamp(),
-        details={"target": target_key},
+        details={
+            "target": target_key,
+            "validated_on_platform": validated_on_platform,
+        },
     )
 
 

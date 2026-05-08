@@ -72,18 +72,6 @@
           "default": null,
           "title": "Profile"
         },
-        "python_platform": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Python Platform"
-        },
         "python_version": {
           "anyOf": [
             {

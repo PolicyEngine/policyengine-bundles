@@ -79,13 +79,7 @@ bundles/
       uk.json
     install/
       us/
-        linux-py313/
-          constraints.txt
-          pylock.toml
-        macos-py313/
-          constraints.txt
-          pylock.toml
-        windows-py313/
+        py313/
           constraints.txt
           pylock.toml
     validation-report.json
@@ -239,12 +233,12 @@ paths are not portable. Use `--testing-only` for local tests, or
 python scripts/solve_lockfiles.py bundles/4.4.0
 ```
 
-This writes profile/platform/Python-specific artifacts under `install/`, then
-records their relative paths back into `bundle.json` as profile
-`install_targets`.
+This writes profile/Python-specific artifacts under `install/`, then records
+their relative paths back into `bundle.json` as profile `install_targets`.
 Here, "lockfile" means an installation-resolution artifact, not a concurrency
-lock. By default this solves Linux, macOS, and Windows targets. Pass
-`--python-platform` one or more times to solve only selected targets.
+lock. The bundle contract assumes the exact package graph works across supported
+systems for a given Python version; validation records the platform it actually
+ran on as evidence, not as part of bundle identity.
 
 3. Validate the complete bundle:
 
@@ -257,9 +251,8 @@ declared hashes, creates clean profile environments from the generated
 constraints, verifies direct package versions, imports the profile packages, and
 runs country household smoke checks where supported. The resulting
 `validation-report.json` is part of the bundle contract.
-Runtime validation defaults to the current runner platform. Full cross-platform
-certification should run this script on matching Linux, macOS, and Windows CI
-runners, passing `--python-platform` for the target being certified.
+Runtime validation records the current runner platform in check details, but
+platform-specific lockfiles are intentionally out of scope for this contract.
 
 ## Validation
 
@@ -299,5 +292,5 @@ A bundle release should not be published unless:
 - data artifact URIs are immutable/versioned;
 - certified data artifacts include SHA256 hashes;
 - country data release manifests are reachable;
-- lockfile/constraints files solve for supported Python versions and platforms;
+- lockfile/constraints files solve for supported Python versions;
 - integrated validation passes for each profile.

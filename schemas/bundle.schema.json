@@ -11,10 +11,6 @@
           "title": "Lockfile",
           "type": "string"
         },
-        "python_platform": {
-          "title": "Python Platform",
-          "type": "string"
-        },
         "python_version": {
           "title": "Python Version",
           "type": "string"
@@ -27,7 +23,6 @@
       },
       "required": [
         "python_version",
-        "python_platform",
         "constraints",
         "lockfile"
       ],
