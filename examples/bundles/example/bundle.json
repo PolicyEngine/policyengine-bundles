@@ -7,6 +7,10 @@
     "version": "0.0.0-example"
   },
   "packages": {
+    "policyengine": {
+      "name": "policyengine",
+      "version": "0.0.0-example"
+    },
     "policyengine-core": {
       "name": "policyengine-core",
       "version": "0.0.0"
@@ -27,8 +31,8 @@
       "countries": [
         "us"
       ],
-      "locks": {
-        "py313": "locks/pylock.us.py313.toml"
+      "lockfiles": {
+        "py313": "lockfiles/pylock.us.py313.toml"
       },
       "constraints": {
         "py313": "constraints/constraints-us-py313.txt"

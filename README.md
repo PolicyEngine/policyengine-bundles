@@ -24,7 +24,7 @@ bundle==4.4.0
   pins country data artifact releases
   pins dataset URIs and SHA256s
   carries validation results
-  carries install locks or constraints by profile and Python version
+  carries install lockfiles or constraints by profile and Python version
 ```
 
 Country packages and data packages continue to release independently. A bundle
@@ -35,6 +35,9 @@ selects already-published artifacts and certifies that they work together.
 ```text
 src/
   policyengine_bundles/
+    bundle_validation.py
+    generation.py
+    lockfiles.py
     models.py
     validation.py
 schemas/
@@ -51,6 +54,10 @@ examples/
         us.json
       validation-report.json
 scripts/
+  generate_bundle.py
+  solve_lockfiles.py
+  validate_bundle.py
+  validate_models.py
   validate_schemas.py
 ```
 
@@ -63,7 +70,7 @@ bundles/
     countries/
       us.json
       uk.json
-    locks/
+    lockfiles/
       pylock.us.py313.toml
       pylock.uk.py313.toml
       pylock.all.py313.toml
@@ -184,12 +191,57 @@ can load the matching bundle, select a profile, resolve packages and datasets,
 and reject failed or incomplete bundles unless the caller explicitly asks to run
 with an uncertified historical seed.
 
+## Authoring Flow
+
+The current tooling demonstrates the intended bundle publication path without
+adding extra release marker files. The official artifact is still the versioned
+`bundle.json` plus its referenced country manifests, lockfiles, constraints, and
+validation report.
+
+1. Generate a bundle from an explicit candidate spec:
+
+```bash
+python scripts/generate_bundle.py \
+  --input candidate-bundle.json \
+  --output bundles/4.4.0
+```
+
+The candidate spec chooses the human-facing `policyengine` version, exact
+package versions, supported Python versions, profiles, and country data release
+manifest URIs. Data release manifests may be loaded from `file://` paths for
+local testing or from `hf://...` references for Hugging Face artifacts. Private
+Hugging Face reads use `HF_TOKEN` or `HUGGING_FACE_HUB_TOKEN` when set.
+
+2. Generate install lockfiles and hash-pinned constraints:
+
+```bash
+python scripts/solve_lockfiles.py bundles/4.4.0
+```
+
+This writes profile/Python-specific artifacts under `lockfiles/` and
+`constraints/`, then records their relative paths back into `bundle.json`.
+Here, "lockfile" means an installation-resolution artifact, not a concurrency
+lock.
+
+3. Validate the complete bundle:
+
+```bash
+python scripts/validate_bundle.py bundles/4.4.0
+```
+
+Validation checks that certified data artifacts have hashes, creates clean
+profile environments from the generated constraints, verifies direct package
+versions, imports the profile packages, and runs country household smoke checks
+where supported. The resulting `validation-report.json` is part of the bundle
+contract.
+
 ## Validation
 
 Run local validation with:
 
 ```bash
 python -m pip install -e ".[dev]"
+pytest
 python scripts/validate_schemas.py
 python scripts/validate_models.py
 ruff format --check .
@@ -219,5 +271,5 @@ A bundle release should not be published unless:
 - data artifact URIs are immutable/versioned;
 - certified data artifacts include SHA256 hashes;
 - country data release manifests are reachable;
-- lock/constraints files solve for supported Python versions;
+- lockfile/constraints files solve for supported Python versions;
 - integrated validation passes for each profile.

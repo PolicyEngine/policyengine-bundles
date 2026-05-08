@@ -162,7 +162,7 @@ class Profile(BundleModel):
     packages: list[str]
     countries: list[str]
     description: str | None = None
-    locks: dict[str, str] = Field(default_factory=dict)
+    lockfiles: dict[str, str] = Field(default_factory=dict)
     constraints: dict[str, str] = Field(default_factory=dict)
 
 

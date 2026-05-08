@@ -1,5 +1,8 @@
 """Typed models and validation helpers for PolicyEngine bundle manifests."""
 
+from policyengine_bundles.bundle_validation import validate_bundle
+from policyengine_bundles.generation import generate_bundle, load_release_manifest_uri
+from policyengine_bundles.lockfiles import solve_lockfiles
 from policyengine_bundles.models import (
     ArtifactRelease,
     BundleManifest,
@@ -38,6 +41,10 @@ __all__ = [
     "RuntimeComponentMetadata",
     "ValidationCheck",
     "ValidationReport",
+    "generate_bundle",
     "load_bundle_directory",
     "load_component_metadata",
+    "load_release_manifest_uri",
+    "solve_lockfiles",
+    "validate_bundle",
 ]

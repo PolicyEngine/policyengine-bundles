@@ -157,7 +157,7 @@
           },
           "uniqueItems": true
         },
-        "locks": {
+        "lockfiles": {
           "type": "object",
           "additionalProperties": {
             "$ref": "#/$defs/relative_path"

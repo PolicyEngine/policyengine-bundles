@@ -125,6 +125,10 @@
         },
         "certified_by": {
           "type": "string"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
         }
       }
     },
@@ -161,8 +165,21 @@
       "additionalProperties": false,
       "required": [
         "kind",
-        "uri",
         "status"
+      ],
+      "anyOf": [
+        {
+          "required": [
+            "uri"
+          ]
+        },
+        {
+          "required": [
+            "path",
+            "repo_id",
+            "revision"
+          ]
+        }
       ],
       "allOf": [
         {
@@ -210,6 +227,15 @@
         "uri": {
           "type": "string"
         },
+        "path": {
+          "type": "string"
+        },
+        "repo_id": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        },
         "status": {
           "enum": [
             "certified",
@@ -236,6 +262,10 @@
           "items": {
             "$ref": "#/$defs/preservation_mirror"
           }
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true
         }
       }
     },
@@ -283,6 +313,10 @@
           "$ref": "#/$defs/hash_sha256"
         },
         "wheel_url": {
+          "type": "string",
+          "format": "uri"
+        },
+        "sdist_url": {
           "type": "string",
           "format": "uri"
         },
