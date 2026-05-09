@@ -27,7 +27,7 @@ from policyengine_bundles.python_versions import (
     metadata_python_versions,
     python_version_key_map,
 )
-from policyengine_bundles.references import HuggingFaceReference
+from policyengine_bundles.references import HuggingFaceReference, hugging_face_token
 from policyengine_bundles.validation import BundleDirectory, load_bundle_directory
 
 IMPORT_NAMES = {
@@ -711,7 +711,7 @@ def _hash_url(url: str) -> ArtifactVerification:
     digest = hashlib.sha256()
     size_bytes = 0
     request = urllib.request.Request(url)
-    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    token = hugging_face_token()
     if token and "huggingface.co" in urllib.parse.urlparse(url).netloc:
         request.add_header("Authorization", f"Bearer {token}")
     with urllib.request.urlopen(request, timeout=300) as response:

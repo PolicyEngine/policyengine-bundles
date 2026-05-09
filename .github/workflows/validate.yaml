@@ -26,3 +26,58 @@ jobs:
         run: ruff format --check .
       - name: Lint
         run: ruff check .
+
+  certify-live-4-4-1:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    env:
+      HUGGING_FACE_TOKEN: ${{ secrets.HUGGING_FACE_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install validation tooling
+        run: python -m pip install --upgrade -e ".[dev]"
+      - name: Confirm private data access is configured
+        run: test -n "$HUGGING_FACE_TOKEN"
+      - name: Write release candidate
+        run: |
+          mkdir -p .tmp
+          cat > .tmp/candidate-4.4.1-all.json <<'JSON'
+          {
+            "schema_version": 1,
+            "bundle_version": "4.4.1",
+            "policyengine_version": "4.4.1",
+            "python_versions": ["3.13"],
+            "profiles": ["us", "uk", "all"],
+            "packages": {
+              "policyengine-core": "3.26.0",
+              "policyengine-us": "1.687.0",
+              "policyengine-uk": "2.88.14"
+            },
+            "countries": {
+              "us": {
+                "model_package": "policyengine-us",
+                "data_release_manifest_uri": "hf://model/policyengine/policyengine-us-data@2f1ea16b152cd9db4a4d2f1aad4d42e7484d5999/releases/1.78.2/release_manifest.json"
+              },
+              "uk": {
+                "model_package": "policyengine-uk",
+                "data_release_manifest_uri": "hf://model/policyengine/policyengine-uk-data-private@1.55.5/release_manifest.json"
+              }
+            }
+          }
+          JSON
+      - name: Generate bundle
+        run: |
+          python scripts/generate_bundle.py \
+            --input .tmp/candidate-4.4.1-all.json \
+            --output .tmp/bundle-4.4.1
+      - name: Solve lockfiles
+        run: python scripts/solve_lockfiles.py .tmp/bundle-4.4.1
+      - name: Validate bundle
+        run: python scripts/validate_bundle.py .tmp/bundle-4.4.1
+      - uses: actions/upload-artifact@v4
+        with:
+          name: policyengine-bundle-4.4.1-all
+          path: .tmp/bundle-4.4.1

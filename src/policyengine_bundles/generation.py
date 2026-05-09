@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import urllib.parse
 import urllib.request
 from collections.abc import Callable, Mapping
@@ -31,7 +30,7 @@ from policyengine_bundles.models import (
     ValidationReport,
 )
 from policyengine_bundles.python_versions import python_version_key_map
-from policyengine_bundles.references import HuggingFaceReference
+from policyengine_bundles.references import HuggingFaceReference, hugging_face_token
 from policyengine_bundles.validation import load_bundle_directory
 
 PackageResolver = Callable[[str, str], PackagePin]
@@ -161,7 +160,7 @@ def load_release_manifest_uri(uri: str) -> LoadedManifest:
 
 def _read_hf_bytes(reference: HuggingFaceReference) -> bytes:
     request = urllib.request.Request(reference.download_url())
-    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    token = hugging_face_token()
     if token:
         request.add_header("Authorization", f"Bearer {token}")
     with urllib.request.urlopen(request, timeout=60) as response:

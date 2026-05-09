@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from policyengine_bundles.references import HuggingFaceReference
+from policyengine_bundles.references import HuggingFaceReference, hugging_face_token
 
 
 def test_parse_canonical_hf_reference() -> None:
@@ -81,3 +81,25 @@ def test_parse_legacy_hf_reference() -> None:
 def test_parse_hf_reference_rejects_incomplete_uri(uri: str) -> None:
     with pytest.raises(ValueError):
         HuggingFaceReference.parse(uri)
+
+
+@pytest.mark.parametrize(
+    ("name", "value"),
+    [
+        ("HF_TOKEN", "hf-token"),
+        ("HUGGING_FACE_HUB_TOKEN", "hub-token"),
+        ("HUGGING_FACE_TOKEN", "legacy-token"),
+    ],
+)
+def test_hugging_face_token_accepts_supported_env_names(
+    monkeypatch: pytest.MonkeyPatch,
+    name: str,
+    value: str,
+) -> None:
+    monkeypatch.delenv("HF_TOKEN", raising=False)
+    monkeypatch.delenv("HUGGING_FACE_HUB_TOKEN", raising=False)
+    monkeypatch.delenv("HUGGING_FACE_TOKEN", raising=False)
+
+    monkeypatch.setenv(name, value)
+
+    assert hugging_face_token() == value

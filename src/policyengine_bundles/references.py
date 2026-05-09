@@ -1,10 +1,20 @@
 from __future__ import annotations
 
+import os
 import urllib.parse
 from dataclasses import dataclass
 from typing import Literal
 
 RepoType = Literal["model", "dataset", "space"]
+
+
+def hugging_face_token() -> str | None:
+    """Return the first supported Hugging Face token environment variable."""
+    return (
+        os.environ.get("HF_TOKEN")
+        or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+        or os.environ.get("HUGGING_FACE_TOKEN")
+    )
 
 
 @dataclass(frozen=True)

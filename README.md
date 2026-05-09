@@ -221,7 +221,8 @@ The candidate spec chooses the human-facing `policyengine` version, exact
 package versions, supported Python versions, profiles, and country data release
 manifest URIs. Data release manifests may be loaded from `file://` paths for
 local testing or from `hf://...` references for Hugging Face artifacts. Private
-Hugging Face reads use `HF_TOKEN` or `HUGGING_FACE_HUB_TOKEN` when set.
+Hugging Face reads use `HF_TOKEN`, `HUGGING_FACE_HUB_TOKEN`, or
+`HUGGING_FACE_TOKEN` when set.
 The canonical Hugging Face URI form is
 `hf://{repo_type}/{org}/{repo}@{revision}/{path}`, for example
 `hf://model/policyengine/policyengine-us-data@1.73.0/release_manifest.json`.
