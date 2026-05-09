@@ -46,6 +46,8 @@ schemas/
   country-bundle.schema.json
   data-release-manifest.schema.json
   validation-report.schema.json
+candidates/
+  4.4.2-all.json
 docs/
   component-metadata-contract.md
 examples/
@@ -312,6 +314,12 @@ python scripts/validate_bundle.py \
 Partial reports mark the skipped checks and set
 `metadata.validation_scope` to `partial`. They are useful for schema fixtures,
 but they are not evidence that a bundle is reproducible.
+
+CI regenerates the current certified bundle from the committed candidate spec
+and compares it with the checked-in bundle using normalized output. The
+comparison ignores run-local evidence such as timestamps, temporary paths, and
+resolver comments, but it still requires package/data metadata, lockfile
+contents, and validation outcomes to match.
 
 ## Validation
 
