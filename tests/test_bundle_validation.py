@@ -66,6 +66,41 @@ def test_validate_bundle_runs_profile_checks(tmp_path: Path) -> None:
         for check in report.checks
         if check.name in {"constraints_present", "lockfile_present", "create_venv"}
     )
+    assert report.metadata["validation_scope"] == "full"
+    assert report.metadata["verify_data"] is True
+    assert report.metadata["validate_runtime"] is True
+
+
+def test_validate_bundle_can_emit_explicit_partial_report(tmp_path: Path) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, release_manifest())
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+    output_dir = tmp_path / "bundle"
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
+
+    report = validate_bundle(
+        output_dir,
+        verify_data=False,
+        validate_runtime=False,
+    )
+
+    assert report.status == "skipped"
+    assert report.metadata["validation_scope"] == "partial"
+    assert report.metadata["verify_data"] is False
+    assert report.metadata["validate_runtime"] is False
+    assert any(
+        check.name == "data_release_manifest_contract" and check.status == "skipped"
+        for check in report.checks
+    )
+    assert any(
+        check.name == "runtime_validation" and check.status == "skipped"
+        for check in report.checks
+    )
 
 
 def test_package_version_check_code_executes(tmp_path: Path, monkeypatch) -> None:

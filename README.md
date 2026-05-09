@@ -298,6 +298,20 @@ For embedded release manifests, validation hashes the embedded file from the
 bundle directory. Missing embedded manifests fail validation instead of falling
 back to the original source URI recorded for provenance.
 
+The validator defaults to full certification checks. Test fixtures or
+historical demonstration bundles can opt into an explicitly partial report:
+
+```bash
+python scripts/validate_bundle.py \
+  --skip-data-verification \
+  --skip-runtime-validation \
+  examples/bundles/example
+```
+
+Partial reports mark the skipped checks and set
+`metadata.validation_scope` to `partial`. They are useful for schema fixtures,
+but they are not evidence that a bundle is reproducible.
+
 ## Validation
 
 Run local validation with:

@@ -59,20 +59,42 @@ def validate_bundle(
     *,
     runner: CommandRunner = run_command,
     artifact_verifier: ArtifactVerifier | None = None,
+    verify_data: bool = True,
+    validate_runtime: bool = True,
 ) -> ValidationReport:
     bundle = load_bundle_directory(bundle_dir)
     selected_profiles = list(bundle.manifest.profiles)
     resolved_artifact_verifier = artifact_verifier or verify_artifact_uri
     checks: list[ValidationCheck] = []
-    checks.extend(
-        _validate_data_contracts(
-            bundle=bundle,
-            profiles=selected_profiles,
-            artifact_verifier=resolved_artifact_verifier,
+    if verify_data:
+        checks.extend(
+            _validate_data_contracts(
+                bundle=bundle,
+                profiles=selected_profiles,
+                artifact_verifier=resolved_artifact_verifier,
+            )
         )
-    )
+    else:
+        checks.extend(
+            _skipped_data_contract_checks(
+                bundle=bundle,
+                profiles=selected_profiles,
+            )
+        )
     for profile_name in selected_profiles:
         profile = bundle.manifest.profiles[profile_name]
+        if not validate_runtime:
+            checks.append(
+                ValidationCheck(
+                    name="runtime_validation",
+                    status="skipped",
+                    profile=profile_name,
+                    details={
+                        "reason": "Runtime validation disabled by caller.",
+                    },
+                )
+            )
+            continue
         install_target_coverage = _validate_install_target_coverage(
             bundle=bundle,
             profile_name=profile_name,
@@ -99,7 +121,14 @@ def validate_bundle(
         generated_at=_now_timestamp(),
         status=_overall_status(checks),
         checks=checks,
-        metadata={"generated_by": "scripts/validate_bundle.py"},
+        metadata={
+            "generated_by": "scripts/validate_bundle.py",
+            "validation_scope": (
+                "full" if verify_data and validate_runtime else "partial"
+            ),
+            "verify_data": verify_data,
+            "validate_runtime": validate_runtime,
+        },
     )
     write_json(
         bundle.root / bundle.manifest.validation_report,
@@ -253,6 +282,31 @@ def _validate_data_contracts(
                     profile=profile_name,
                     country=country_id,
                     details={"failures": failures} if failures else {},
+                )
+            )
+    return checks
+
+
+def _skipped_data_contract_checks(
+    bundle: BundleDirectory,
+    profiles: Sequence[str],
+) -> list[ValidationCheck]:
+    checks: list[ValidationCheck] = []
+    for profile_name in profiles:
+        profile = bundle.manifest.profiles[profile_name]
+        for country_id in profile.countries:
+            checks.append(
+                ValidationCheck(
+                    name="data_release_manifest_contract",
+                    status="skipped",
+                    profile=profile_name,
+                    country=country_id,
+                    details={
+                        "reason": (
+                            "Data artifact and release manifest verification "
+                            "disabled by caller."
+                        ),
+                    },
                 )
             )
     return checks

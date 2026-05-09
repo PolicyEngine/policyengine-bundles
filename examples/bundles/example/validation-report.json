@@ -1,17 +1,31 @@
 {
-  "schema_version": 1,
   "bundle_version": "0.0.0-example",
-  "generated_at": "2026-04-30T00:00:00Z",
-  "status": "passed",
   "checks": [
     {
-      "name": "schema-validation",
-      "profile": "us",
-      "status": "passed",
-      "python_version": "3.13",
+      "country": "us",
       "details": {
-        "message": "Example bundle validates."
-      }
+        "reason": "Data artifact and release manifest verification disabled by caller."
+      },
+      "name": "data_release_manifest_contract",
+      "profile": "us",
+      "status": "skipped"
+    },
+    {
+      "details": {
+        "reason": "Runtime validation disabled by caller."
+      },
+      "name": "runtime_validation",
+      "profile": "us",
+      "status": "skipped"
     }
-  ]
+  ],
+  "generated_at": "2026-05-09T03:57:56Z",
+  "metadata": {
+    "generated_by": "scripts/validate_bundle.py",
+    "validate_runtime": false,
+    "validation_scope": "partial",
+    "verify_data": false
+  },
+  "schema_version": 1,
+  "status": "skipped"
 }
