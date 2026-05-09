@@ -28,7 +28,7 @@ jobs:
       - name: Lint
         run: ruff check .
 
-  certify-live-4-4-1:
+  certify-live-4-4-2:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     env:
@@ -46,11 +46,11 @@ jobs:
       - name: Write release candidate
         run: |
           mkdir -p .tmp
-          cat > .tmp/candidate-4.4.1-all.json <<'JSON'
+          cat > .tmp/candidate-4.4.2-all.json <<'JSON'
           {
             "schema_version": 1,
-            "bundle_version": "4.4.1",
-            "policyengine_version": "4.4.1",
+            "bundle_version": "4.4.2",
+            "policyengine_version": "4.4.2",
             "python_versions": ["3.13"],
             "profiles": ["us", "uk", "all"],
             "packages": {
@@ -73,13 +73,13 @@ jobs:
       - name: Generate bundle
         run: |
           python scripts/generate_bundle.py \
-            --input .tmp/candidate-4.4.1-all.json \
-            --output .tmp/bundle-4.4.1
+            --input .tmp/candidate-4.4.2-all.json \
+            --output .tmp/bundle-4.4.2
       - name: Solve lockfiles
-        run: python scripts/solve_lockfiles.py .tmp/bundle-4.4.1
+        run: python scripts/solve_lockfiles.py .tmp/bundle-4.4.2
       - name: Validate bundle
-        run: python scripts/validate_bundle.py .tmp/bundle-4.4.1
+        run: python scripts/validate_bundle.py .tmp/bundle-4.4.2
       - uses: actions/upload-artifact@v4
         with:
-          name: policyengine-bundle-4.4.1-all
-          path: .tmp/bundle-4.4.1
+          name: policyengine-bundle-4.4.2-all
+          path: .tmp/bundle-4.4.2
