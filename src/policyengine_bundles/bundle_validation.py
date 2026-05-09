@@ -587,7 +587,7 @@ def _package_version_check_code(
     }
     return (
         "import importlib.metadata as md\n"
-        f"expected = {json.dumps(expected, sort_keys=True)!r}\n"
+        f"expected = {json.dumps(expected, sort_keys=True)}\n"
         "for name, version in expected.items():\n"
         "    actual = md.version(name)\n"
         "    assert actual == version, f'{name}: expected {version}, got {actual}'\n"

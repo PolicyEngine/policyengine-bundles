@@ -7,11 +7,13 @@ from conftest import fake_resolver, release_manifest, write_candidate, write_jso
 
 from policyengine_bundles.bundle_validation import (
     ArtifactVerification,
+    _package_version_check_code,
     validate_bundle,
     verify_artifact_uri,
 )
 from policyengine_bundles.generation import generate_bundle
 from policyengine_bundles.lockfiles import solve_lockfiles
+from policyengine_bundles.validation import load_bundle_directory
 
 
 def generated_bundle_with_install_artifacts(tmp_path: Path) -> Path:
@@ -64,6 +66,23 @@ def test_validate_bundle_runs_profile_checks(tmp_path: Path) -> None:
         for check in report.checks
         if check.name in {"constraints_present", "lockfile_present", "create_venv"}
     )
+
+
+def test_package_version_check_code_executes(tmp_path: Path, monkeypatch) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+    bundle = load_bundle_directory(bundle_dir)
+    versions = {
+        name: package.version for name, package in bundle.manifest.packages.items()
+    }
+    monkeypatch.setattr(
+        "importlib.metadata.version",
+        lambda package_name: versions[package_name],
+    )
+    code = _package_version_check_code(
+        bundle,
+        bundle.manifest.profiles["us"].packages,
+    )
+    exec(code, {})
 
 
 def test_validate_bundle_reports_runtime_failure(tmp_path: Path) -> None:
