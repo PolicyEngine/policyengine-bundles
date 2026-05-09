@@ -43,42 +43,19 @@ jobs:
         run: python -m pip install --upgrade -e ".[dev]"
       - name: Confirm private data access is configured
         run: test -n "$HUGGING_FACE_TOKEN"
-      - name: Write release candidate
-        run: |
-          mkdir -p .tmp
-          cat > .tmp/candidate-4.4.2-all.json <<'JSON'
-          {
-            "schema_version": 1,
-            "bundle_version": "4.4.2",
-            "policyengine_version": "4.4.2",
-            "python_versions": ["3.13"],
-            "profiles": ["us", "uk", "all"],
-            "packages": {
-              "policyengine-core": "3.26.1",
-              "policyengine-us": "1.687.0",
-              "policyengine-uk": "2.88.14"
-            },
-            "countries": {
-              "us": {
-                "model_package": "policyengine-us",
-                "data_release_manifest_uri": "hf://model/policyengine/policyengine-us-data@9cb665df0a546f9c3d79b496f8eb2dd55859d38d/releases/1.78.2/release_manifest.json"
-              },
-              "uk": {
-                "model_package": "policyengine-uk",
-                "data_release_manifest_uri": "hf://model/policyengine/policyengine-uk-data-private@1.55.5/release_manifest.json"
-              }
-            }
-          }
-          JSON
+      - name: Create work directory
+        run: mkdir -p .tmp
       - name: Generate bundle
         run: |
           python scripts/generate_bundle.py \
-            --input .tmp/candidate-4.4.2-all.json \
+            --input candidates/4.4.2-all.json \
             --output .tmp/bundle-4.4.2
       - name: Solve lockfiles
         run: python scripts/solve_lockfiles.py .tmp/bundle-4.4.2
       - name: Validate bundle
         run: python scripts/validate_bundle.py .tmp/bundle-4.4.2
+      - name: Compare regenerated bundle to committed bundle
+        run: python scripts/compare_bundle_directories.py bundles/4.4.2 .tmp/bundle-4.4.2
       - uses: actions/upload-artifact@v4
         with:
           name: policyengine-bundle-4.4.2-all
