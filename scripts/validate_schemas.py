@@ -6,6 +6,8 @@ from typing import Any
 
 from jsonschema.validators import validator_for
 
+from policyengine_bundles.schema_generation import generated_schema_documents
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_DIR = REPO_ROOT / "schemas"
 BUNDLE_ROOTS = [
@@ -41,6 +43,33 @@ def validate_instance(schema: dict[str, Any], instance_path: Path) -> None:
         raise SystemExit(f"{instance_path} failed validation:\n{details}")
 
 
+def validate_generated_schemas_current() -> None:
+    expected = generated_schema_documents()
+    actual_schema_paths = {
+        path.name: path for path in sorted(SCHEMA_DIR.glob("*.schema.json"))
+    }
+    if set(actual_schema_paths) != set(expected):
+        extra = sorted(set(actual_schema_paths).difference(expected))
+        missing = sorted(set(expected).difference(actual_schema_paths))
+        raise SystemExit(
+            "Schema file set does not match generated Pydantic schemas. "
+            f"Extra: {extra}. Missing: {missing}. "
+            "Run python scripts/generate_schemas.py."
+        )
+
+    for filename, expected_schema in expected.items():
+        actual_schema = load_json(actual_schema_paths[filename])
+        if actual_schema != expected_schema:
+            raise SystemExit(
+                f"{actual_schema_paths[filename]} is not generated from the "
+                "current Pydantic models. Run python scripts/generate_schemas.py."
+            )
+        print(
+            "schema generation ok: "
+            f"{actual_schema_paths[filename].relative_to(REPO_ROOT)}"
+        )
+
+
 def iter_bundle_dirs() -> list[Path]:
     bundle_dirs: list[Path] = []
     for root in BUNDLE_ROOTS:
@@ -51,6 +80,8 @@ def iter_bundle_dirs() -> list[Path]:
 
 
 def main() -> int:
+    validate_generated_schemas_current()
+
     bundle_schema = load_schema(SCHEMA_DIR / "bundle.schema.json")
     country_schema = load_schema(SCHEMA_DIR / "country-bundle.schema.json")
     validation_schema = load_schema(SCHEMA_DIR / "validation-report.schema.json")

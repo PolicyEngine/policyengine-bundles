@@ -7,6 +7,10 @@
     "version": "0.0.0-example"
   },
   "packages": {
+    "policyengine": {
+      "name": "policyengine",
+      "version": "0.0.0-example"
+    },
     "policyengine-core": {
       "name": "policyengine-core",
       "version": "0.0.0"
@@ -27,16 +31,23 @@
       "countries": [
         "us"
       ],
-      "locks": {
-        "py313": "locks/pylock.us.py313.toml"
-      },
-      "constraints": {
-        "py313": "constraints/constraints-us-py313.txt"
+      "install_targets": {
+        "py313": {
+          "python_version": "3.13",
+          "constraints": "constraints/constraints-us-py313.txt",
+          "lockfile": "lockfiles/pylock.us.py313.toml",
+          "resolver": "uv"
+        }
       }
     }
   },
   "countries": {
     "us": "countries/us.json"
+  },
+  "metadata": {
+    "python_versions": [
+      "3.13"
+    ]
   },
   "validation_report": "validation-report.json"
 }

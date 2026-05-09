@@ -1,115 +1,22 @@
 {
   "$defs": {
-    "ArtifactRelease": {
+    "CompatiblePackageSpecifier": {
       "additionalProperties": false,
       "properties": {
-        "release_manifest_sha256": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Release Manifest Sha256"
-        },
-        "release_manifest_uri": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Release Manifest Uri"
-        },
-        "repo_id": {
-          "title": "Repo Id",
+        "name": {
+          "title": "Name",
           "type": "string"
         },
-        "repo_type": {
-          "default": "model",
-          "title": "Repo Type",
-          "type": "string"
-        },
-        "version": {
-          "title": "Version",
+        "specifier": {
+          "title": "Specifier",
           "type": "string"
         }
       },
       "required": [
-        "repo_id",
-        "version"
+        "name",
+        "specifier"
       ],
-      "title": "ArtifactRelease",
-      "type": "object"
-    },
-    "CountryCertification": {
-      "additionalProperties": false,
-      "properties": {
-        "built_with_core_package": {
-          "$ref": "#/$defs/PackagePin"
-        },
-        "built_with_model_package": {
-          "$ref": "#/$defs/PackagePin"
-        },
-        "certified_by": {
-          "title": "Certified By",
-          "type": "string"
-        },
-        "certified_for_core_package": {
-          "$ref": "#/$defs/PackagePin"
-        },
-        "certified_for_model_package": {
-          "$ref": "#/$defs/PackagePin"
-        },
-        "compatibility_basis": {
-          "title": "Compatibility Basis",
-          "type": "string"
-        },
-        "data_build_fingerprint": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Data Build Fingerprint"
-        },
-        "data_build_id": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Data Build Id"
-        },
-        "metadata": {
-          "additionalProperties": true,
-          "title": "Metadata",
-          "type": "object"
-        }
-      },
-      "required": [
-        "compatibility_basis",
-        "built_with_model_package",
-        "built_with_core_package",
-        "certified_for_model_package",
-        "certified_for_core_package",
-        "certified_by"
-      ],
-      "title": "CountryCertification",
+      "title": "CompatiblePackageSpecifier",
       "type": "object"
     },
     "DataArtifact": {
@@ -323,25 +230,73 @@
       "title": "DataArtifact",
       "type": "object"
     },
-    "DataPackageReference": {
+    "DataBuildInfo": {
+      "additionalProperties": false,
+      "properties": {
+        "build_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Build Id"
+        },
+        "built_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Built At"
+        },
+        "built_with_core_package": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeComponentMetadata"
+            },
+            {
+              "$ref": "#/$defs/PackagePin"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Built With Core Package"
+        },
+        "built_with_model_package": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeComponentMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "title": "DataBuildInfo",
+      "type": "object"
+    },
+    "PackageIdentity": {
       "additionalProperties": false,
       "properties": {
         "name": {
           "title": "Name",
-          "type": "string"
-        },
-        "release_manifest_path": {
-          "default": "release_manifest.json",
-          "title": "Release Manifest Path",
-          "type": "string"
-        },
-        "repo_id": {
-          "title": "Repo Id",
-          "type": "string"
-        },
-        "repo_type": {
-          "default": "model",
-          "title": "Repo Type",
           "type": "string"
         },
         "version": {
@@ -351,10 +306,9 @@
       },
       "required": [
         "name",
-        "version",
-        "repo_id"
+        "version"
       ],
-      "title": "DataPackageReference",
+      "title": "PackageIdentity",
       "type": "object"
     },
     "PackagePin": {
@@ -549,14 +503,22 @@
       "title": "PreservationMirror",
       "type": "object"
     },
-    "RegionDataset": {
+    "RuntimeComponentMetadata": {
       "additionalProperties": false,
+      "description": "Dependency-free metadata emitted by component packages.",
       "properties": {
-        "path_template": {
-          "title": "Path Template",
-          "type": "string"
+        "core": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PackagePin"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
-        "uri_template": {
+        "data_build_fingerprint": {
           "anyOf": [
             {
               "type": "string"
@@ -566,25 +528,94 @@
             }
           ],
           "default": null,
-          "title": "Uri Template"
+          "title": "Data Build Fingerprint"
+        },
+        "git_sha": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Git Sha"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "source_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Path"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "wheel_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wheel Sha256"
+        },
+        "wheel_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wheel Url"
         }
       },
       "required": [
-        "path_template"
+        "name",
+        "version"
       ],
-      "title": "RegionDataset",
+      "title": "RuntimeComponentMetadata",
       "type": "object"
     }
   },
-  "$id": "https://policyengine.org/schemas/policyengine-country-bundle.schema.json",
+  "$id": "https://policyengine.org/schemas/policyengine-data-release-manifest.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Country-specific certification manifest for one PolicyEngine bundle.",
+  "description": "Published data-package release contract consumed by bundles.",
   "properties": {
-    "artifact_release": {
+    "artifacts": {
+      "additionalProperties": {
+        "$ref": "#/$defs/DataArtifact"
+      },
+      "title": "Artifacts",
+      "type": "object"
+    },
+    "build": {
       "anyOf": [
         {
-          "$ref": "#/$defs/ArtifactRelease"
+          "$ref": "#/$defs/DataBuildInfo"
         },
         {
           "type": "null"
@@ -592,49 +623,53 @@
       ],
       "default": null
     },
-    "bundle_version": {
-      "title": "Bundle Version",
-      "type": "string"
+    "compatible_core_packages": {
+      "items": {
+        "$ref": "#/$defs/CompatiblePackageSpecifier"
+      },
+      "title": "Compatible Core Packages",
+      "type": "array"
     },
-    "certification": {
-      "$ref": "#/$defs/CountryCertification"
+    "compatible_model_packages": {
+      "items": {
+        "$ref": "#/$defs/CompatiblePackageSpecifier"
+      },
+      "title": "Compatible Model Packages",
+      "type": "array"
     },
-    "core_package": {
-      "$ref": "#/$defs/PackagePin"
-    },
-    "country_id": {
-      "title": "Country Id",
-      "type": "string"
+    "created_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Created At"
     },
     "data_package": {
-      "$ref": "#/$defs/DataPackageReference"
+      "$ref": "#/$defs/PackageIdentity"
     },
-    "datasets": {
+    "default_datasets": {
       "additionalProperties": {
-        "$ref": "#/$defs/DataArtifact"
+        "type": "string"
       },
-      "minProperties": 1,
-      "title": "Datasets",
+      "title": "Default Datasets",
       "type": "object"
-    },
-    "default_dataset": {
-      "title": "Default Dataset",
-      "type": "string"
     },
     "metadata": {
       "additionalProperties": true,
       "title": "Metadata",
       "type": "object"
     },
-    "model_package": {
-      "$ref": "#/$defs/PackagePin"
-    },
-    "region_datasets": {
-      "additionalProperties": {
-        "$ref": "#/$defs/RegionDataset"
+    "preservation_dois": {
+      "items": {
+        "type": "string"
       },
-      "title": "Region Datasets",
-      "type": "object"
+      "title": "Preservation Dois",
+      "type": "array"
     },
     "schema_version": {
       "const": 1,
@@ -644,15 +679,8 @@
   },
   "required": [
     "schema_version",
-    "bundle_version",
-    "country_id",
-    "model_package",
-    "core_package",
-    "data_package",
-    "default_dataset",
-    "datasets",
-    "certification"
+    "data_package"
   ],
-  "title": "PolicyEngine country bundle",
+  "title": "PolicyEngine data release manifest",
   "type": "object"
 }

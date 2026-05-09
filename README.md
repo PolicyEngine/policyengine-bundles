@@ -24,7 +24,7 @@ bundle==4.4.0
   pins country data artifact releases
   pins dataset URIs and SHA256s
   carries validation results
-  carries install locks or constraints by profile and Python version
+  carries install targets by profile and Python version
 ```
 
 Country packages and data packages continue to release independently. A bundle
@@ -35,11 +35,16 @@ selects already-published artifacts and certifies that they work together.
 ```text
 src/
   policyengine_bundles/
+    bundle_validation.py
+    generation.py
+    lockfiles.py
     models.py
     validation.py
 schemas/
   bundle.schema.json
+  component-runtime-metadata.schema.json
   country-bundle.schema.json
+  data-release-manifest.schema.json
   validation-report.schema.json
 docs/
   component-metadata-contract.md
@@ -51,8 +56,17 @@ examples/
         us.json
       validation-report.json
 scripts/
+  generate_bundle.py
+  generate_schemas.py
+  solve_lockfiles.py
+  validate_bundle.py
+  validate_models.py
   validate_schemas.py
 ```
+
+Schema files are generated from the Pydantic models in
+`policyengine_bundles.models`; do not hand-edit them. Run
+`python scripts/generate_schemas.py` after changing model contracts.
 
 Bundle releases and historical seeds live under:
 
@@ -63,14 +77,11 @@ bundles/
     countries/
       us.json
       uk.json
-    locks/
-      pylock.us.py313.toml
-      pylock.uk.py313.toml
-      pylock.all.py313.toml
-    constraints/
-      constraints-us-py313.txt
-      constraints-uk-py313.txt
-      constraints-all-py313.txt
+    install/
+      us/
+        py313/
+          constraints.txt
+          pylock.toml
     validation-report.json
 ```
 
@@ -97,9 +108,10 @@ pip install "policyengine[uk]==4.4.0"
 pip install "policyengine[us,uk]==4.4.0"
 ```
 
-The bundle manifest is the canonical reproducibility record. Constraints and
-lockfiles are the exact install mechanisms for users who need byte-for-byte
-environment reproduction.
+The bundle manifest is the canonical reproducibility record. Install targets
+point to the profile/Python-specific constraints and lockfile artifacts used to
+recreate the certified package graph. They are not a byte-for-byte operating
+system image or container substitute.
 
 ## Demonstration: Historical 4.3.1 Seed
 
@@ -184,12 +196,131 @@ can load the matching bundle, select a profile, resolve packages and datasets,
 and reject failed or incomplete bundles unless the caller explicitly asks to run
 with an uncertified historical seed.
 
+## Authoring Flow
+
+The current tooling demonstrates the intended bundle publication path without
+adding extra release marker files. The official artifact is still the versioned
+`bundle.json` plus its referenced country manifests, lockfiles, constraints, and
+validation report.
+
+Bundle publication intentionally has one strict path: generate the bundle,
+solve every supported Python version declared in the bundle metadata, then
+validate the complete bundle. The CLI does not support partial profile or
+partial Python-version release artifacts because those can silently create
+stale or incomplete manifests.
+
+1. Generate a bundle from an explicit candidate spec:
+
+```bash
+python scripts/generate_bundle.py \
+  --input candidate-bundle.json \
+  --output bundles/4.4.0
+```
+
+The candidate spec chooses the human-facing `policyengine` version, exact
+package versions, supported Python versions, profiles, and country data release
+manifest URIs. Data release manifests may be loaded from `file://` paths for
+local testing or from `hf://...` references for Hugging Face artifacts. Private
+Hugging Face reads use `HF_TOKEN`, `HUGGING_FACE_HUB_TOKEN`, or
+`HUGGING_FACE_TOKEN` when set.
+The canonical Hugging Face URI form is
+`hf://{repo_type}/{org}/{repo}@{revision}/{path}`, for example
+`hf://model/policyengine/policyengine-us-data@1.73.0/release_manifest.json`.
+Legacy `hf://{org}/{repo}/{path}@{revision}` references are accepted for
+historical bundle inputs and normalized by the shared reference parser.
+
+Certified bundles should use immutable remote release manifest URIs. Local
+`file://` release manifests are rejected by default because absolute filesystem
+paths are not portable. Use `--testing-only` for local tests, or
+`--embed-local-manifests` to copy local manifests into stable bundle paths under
+`source-manifests/<country>/release_manifest.json`.
+When a bundle embeds a local release manifest, that embedded file is the
+authoritative source for validation. Runtime validation does not fall back to
+the original local input path if the embedded copy is missing.
+When a bundle records a release manifest URI, that URI is authoritative even if
+a same-named file exists inside the bundle directory.
+
+2. Generate install lockfiles and hash-pinned constraints:
+
+```bash
+python scripts/solve_lockfiles.py bundles/4.4.0
+```
+
+This writes profile/Python-specific artifacts under `install/`, then records
+their relative paths back into `bundle.json` as profile `install_targets`.
+The supported Python versions come exclusively from
+`bundle.json` `metadata.python_versions`; there is no per-run Python-version
+override.
+Runtime validation requires every profile to contain exactly one install target
+for each declared Python version, with no missing or undeclared targets.
+Here, "lockfile" means an installation-resolution artifact, not a concurrency
+lock. The bundle contract assumes the exact package graph works across supported
+systems for a given Python version; validation records the platform it actually
+ran on as evidence, not as part of bundle identity.
+
+Each install target key must match its Python version:
+
+```json
+{
+  "profiles": {
+    "us": {
+      "install_targets": {
+        "py313": {
+          "python_version": "3.13",
+          "constraints": "install/us/py313/constraints.txt",
+          "lockfile": "install/us/py313/pylock.toml",
+          "resolver": "uv"
+        }
+      }
+    }
+  }
+}
+```
+
+New bundles should use only `install_targets`. The older profile-level
+`constraints` and `lockfiles` maps are intentionally not part of the current
+schema because they make install resolution ambiguous.
+
+3. Validate the complete bundle:
+
+```bash
+python scripts/validate_bundle.py bundles/4.4.0
+```
+
+Validation checks that certified data artifacts are reachable and match their
+declared hashes, creates clean profile environments from the generated
+constraints, verifies direct package versions, imports the profile packages, and
+runs country household smoke checks where supported for every profile and every
+declared install target. The resulting
+`validation-report.json` is part of the bundle contract.
+Runtime validation records the current runner platform in check details, but
+platform-specific lockfiles are intentionally out of scope for this contract.
+For embedded release manifests, validation hashes the embedded file from the
+bundle directory. Missing embedded manifests fail validation instead of falling
+back to the original source URI recorded for provenance.
+
+The validator defaults to full certification checks. Test fixtures or
+historical demonstration bundles can opt into an explicitly partial report:
+
+```bash
+python scripts/validate_bundle.py \
+  --skip-data-verification \
+  --skip-runtime-validation \
+  examples/bundles/example
+```
+
+Partial reports mark the skipped checks and set
+`metadata.validation_scope` to `partial`. They are useful for schema fixtures,
+but they are not evidence that a bundle is reproducible.
+
 ## Validation
 
 Run local validation with:
 
 ```bash
 python -m pip install -e ".[dev]"
+python scripts/generate_schemas.py
+pytest
 python scripts/validate_schemas.py
 python scripts/validate_models.py
 ruff format --check .
@@ -198,6 +329,7 @@ ruff check .
 
 The validation script checks that:
 
+- every committed schema was generated from the current Pydantic models;
 - every schema is a valid JSON Schema document;
 - every example bundle validates against `bundle.schema.json`;
 - every example country bundle validates against `country-bundle.schema.json`;
@@ -219,5 +351,5 @@ A bundle release should not be published unless:
 - data artifact URIs are immutable/versioned;
 - certified data artifacts include SHA256 hashes;
 - country data release manifests are reachable;
-- lock/constraints files solve for supported Python versions;
+- profile install targets solve for supported Python versions;
 - integrated validation passes for each profile.

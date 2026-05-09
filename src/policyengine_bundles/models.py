@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from pathlib import PurePosixPath
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -11,12 +12,34 @@ class BundleModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+def _validate_relative_posix_path(path: str, field_name: str) -> None:
+    parsed = PurePosixPath(path)
+    if parsed.is_absolute() or ".." in parsed.parts or path in {"", "."}:
+        raise ValueError(f"{field_name} must be a bundle-relative POSIX path.")
+
+
 class PackageIdentity(BundleModel):
     name: str
     version: str
 
 
 class PackagePin(BundleModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "anyOf": [
+                {
+                    "required": ["version"],
+                    "properties": {"version": {"type": "string"}},
+                },
+                {
+                    "required": ["specifier"],
+                    "properties": {"specifier": {"type": "string"}},
+                },
+            ]
+        },
+    )
+
     name: str
     version: str | None = None
     specifier: str | None = None
@@ -55,6 +78,14 @@ class DataPackageReference(BundleModel):
     repo_type: str = "model"
     release_manifest_path: str = "release_manifest.json"
 
+    @model_validator(mode="after")
+    def validate_release_manifest_path(self) -> DataPackageReference:
+        _validate_relative_posix_path(
+            self.release_manifest_path,
+            "release_manifest_path",
+        )
+        return self
+
 
 class ArtifactRelease(BundleModel):
     repo_id: str
@@ -73,6 +104,52 @@ class PreservationMirror(BundleModel):
 
 
 class DataArtifact(BundleModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "anyOf": [
+                {
+                    "required": ["uri"],
+                    "properties": {"uri": {"type": "string"}},
+                },
+                {
+                    "required": ["path", "repo_id", "revision"],
+                    "properties": {
+                        "path": {"type": "string"},
+                        "repo_id": {"type": "string"},
+                        "revision": {"type": "string"},
+                    },
+                },
+            ],
+            "allOf": [
+                {
+                    "if": {
+                        "properties": {"status": {"const": "certified"}},
+                        "required": ["status"],
+                    },
+                    "then": {
+                        "required": ["sha256"],
+                        "properties": {"sha256": {"type": "string"}},
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "status": {
+                                "enum": ["unverified", "unavailable"],
+                            }
+                        },
+                        "required": ["status"],
+                    },
+                    "then": {
+                        "required": ["missing_reason"],
+                        "properties": {"missing_reason": {"type": "string"}},
+                    },
+                },
+            ],
+        },
+    )
+
     kind: str
     uri: str | None = None
     path: str | None = None
@@ -111,7 +188,7 @@ class DataBuildInfo(BundleModel):
 
 
 class DataReleaseManifest(BundleModel):
-    schema_version: int
+    schema_version: Literal[1]
     data_package: PackageIdentity
     compatible_model_packages: list[CompatiblePackageSpecifier] = Field(
         default_factory=list
@@ -123,12 +200,26 @@ class DataReleaseManifest(BundleModel):
     build: DataBuildInfo | None = None
     artifacts: dict[str, DataArtifact] = Field(default_factory=dict)
     preservation_dois: list[str] = Field(default_factory=list)
+    created_at: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class RegionDataset(BundleModel):
     path_template: str
     uri_template: str | None = None
+
+
+class InstallTarget(BundleModel):
+    python_version: str
+    constraints: str
+    lockfile: str
+    resolver: str = "uv"
+
+    @model_validator(mode="after")
+    def validate_bundle_paths(self) -> InstallTarget:
+        _validate_relative_posix_path(self.constraints, "constraints")
+        _validate_relative_posix_path(self.lockfile, "lockfile")
+        return self
 
 
 class CountryCertification(BundleModel):
@@ -144,7 +235,7 @@ class CountryCertification(BundleModel):
 
 
 class CountryBundle(BundleModel):
-    schema_version: int
+    schema_version: Literal[1]
     bundle_version: str
     country_id: str
     model_package: PackagePin
@@ -152,27 +243,26 @@ class CountryBundle(BundleModel):
     data_package: DataPackageReference
     artifact_release: ArtifactRelease | None = None
     default_dataset: str
-    datasets: dict[str, DataArtifact]
+    datasets: dict[str, DataArtifact] = Field(min_length=1)
     region_datasets: dict[str, RegionDataset] = Field(default_factory=dict)
     certification: CountryCertification
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class Profile(BundleModel):
-    packages: list[str]
-    countries: list[str]
+    packages: list[str] = Field(min_length=1)
+    countries: list[str] = Field(min_length=1)
     description: str | None = None
-    locks: dict[str, str] = Field(default_factory=dict)
-    constraints: dict[str, str] = Field(default_factory=dict)
+    install_targets: dict[str, InstallTarget] = Field(default_factory=dict)
 
 
 class BundleManifest(BundleModel):
-    schema_version: int
+    schema_version: Literal[1]
     bundle_version: str
     policyengine: PackagePin
-    packages: dict[str, PackagePin]
-    profiles: dict[str, Profile]
-    countries: dict[str, str]
+    packages: dict[str, PackagePin] = Field(min_length=1)
+    profiles: dict[str, Profile] = Field(min_length=1)
+    countries: dict[str, str] = Field(min_length=1)
     validation_report: str
     created_at: str | None = None
     bundle_digest: str | None = None
@@ -193,9 +283,9 @@ class ValidationCheck(BundleModel):
 
 
 class ValidationReport(BundleModel):
-    schema_version: int
+    schema_version: Literal[1]
     bundle_version: str
     generated_at: str
     status: Literal["passed", "failed", "skipped"]
-    checks: list[ValidationCheck]
+    checks: list[ValidationCheck] = Field(min_length=1)
     metadata: dict[str, Any] = Field(default_factory=dict)

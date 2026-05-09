@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "policyengine-bundles"
 version = "0.0.0"
-description = "Immutable PolicyEngine bundle manifests, locks, constraints, and validation reports."
+description = "Immutable PolicyEngine bundle manifests, install lockfiles, constraints, and validation reports."
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
@@ -15,6 +15,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "pytest>=8",
     "ruff>=0.15",
 ]
 

@@ -17,6 +17,7 @@
       "version": "4.3.1",
       "resolution_status": "pinned",
       "wheel_url": "https://files.pythonhosted.org/packages/90/79/2ca03a0e8459705115c9b1fec89ccda87226ebcc9ca0a470b6cf08096e60/policyengine-4.3.1-py3-none-any.whl",
+      "sdist_url": "https://files.pythonhosted.org/packages/c2/3d/70f78072ce19819659d5f73acd7584d5f8147c804b3041a432eb5236a841/policyengine-4.3.1.tar.gz",
       "sha256": "8a83fc5130aef66dc3442a8da45119e9b712e942a097fdd8a0b3194708fbbdb5",
       "source": "pypi"
     },
