@@ -200,6 +200,7 @@ class DataReleaseManifest(BundleModel):
     build: DataBuildInfo | None = None
     artifacts: dict[str, DataArtifact] = Field(default_factory=dict)
     preservation_dois: list[str] = Field(default_factory=list)
+    created_at: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

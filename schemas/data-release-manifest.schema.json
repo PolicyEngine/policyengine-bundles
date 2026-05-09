@@ -637,6 +637,18 @@
       "title": "Compatible Model Packages",
       "type": "array"
     },
+    "created_at": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Created At"
+    },
     "data_package": {
       "$ref": "#/$defs/PackageIdentity"
     },

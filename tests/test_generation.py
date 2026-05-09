@@ -35,6 +35,23 @@ def test_generate_bundle_from_candidate(tmp_path: Path) -> None:
     assert bundle.countries["us"].default_dataset == "enhanced_cps_2024"
 
 
+def test_generate_bundle_accepts_legacy_release_manifest_created_at(
+    tmp_path: Path,
+) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    payload = release_manifest()
+    payload["created_at"] = "2026-04-15T19:03:37.831756Z"
+    write_json(release_path, payload)
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+
+    generate_bundle(
+        candidate_path,
+        tmp_path / "bundle",
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
+
+
 def test_generate_bundle_supports_all_profile(tmp_path: Path) -> None:
     us_release_path = tmp_path / "us-release-manifest.json"
     uk_release_path = tmp_path / "uk-release-manifest.json"
