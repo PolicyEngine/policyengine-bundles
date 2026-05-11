@@ -7,7 +7,7 @@ import pytest
 from conftest import fake_resolver, release_manifest, write_candidate, write_json
 
 from policyengine_bundles.generation import generate_bundle
-from policyengine_bundles.lockfiles import solve_lockfiles
+from policyengine_bundles.lockfiles import DEFAULT_PYTHON_PLATFORM, solve_lockfiles
 from policyengine_bundles.validation import load_bundle_directory
 
 
@@ -51,12 +51,17 @@ def test_solve_lockfiles_records_generated_install_artifacts(tmp_path: Path) -> 
     assert len(commands) == 2
     assert commands[0][0:3] == ["uv", "pip", "compile"]
     assert "--generate-hashes" in commands[0]
-    assert "--python-platform" not in commands[0]
-    assert "--python-platform" not in commands[1]
+    assert commands[0][commands[0].index("--python-platform") + 1] == (
+        DEFAULT_PYTHON_PLATFORM
+    )
+    assert commands[1][commands[1].index("--python-platform") + 1] == (
+        DEFAULT_PYTHON_PLATFORM
+    )
     assert commands[1][commands[1].index("--format") + 1] == "pylock.toml"
     assert bundle.manifest.metadata["install_artifact_layout"] == (
         "install/{profile}/{python}/"
     )
+    assert bundle.manifest.metadata["python_platform"] == DEFAULT_PYTHON_PLATFORM
     assert "python_platforms" not in bundle.manifest.metadata
 
 
