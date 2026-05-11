@@ -15,6 +15,7 @@ from policyengine_bundles.python_versions import (
 from policyengine_bundles.validation import load_bundle_directory
 
 CommandRunner = Callable[[list[str]], None]
+DEFAULT_PYTHON_PLATFORM = "x86_64-manylinux_2_28"
 
 
 def run_command(command: list[str]) -> None:
@@ -24,6 +25,7 @@ def run_command(command: list[str]) -> None:
 def solve_lockfiles(
     bundle_dir: Path | str,
     *,
+    python_platform: str | None = DEFAULT_PYTHON_PLATFORM,
     runner: CommandRunner = run_command,
 ) -> None:
     bundle_root = Path(bundle_dir)
@@ -49,12 +51,16 @@ def solve_lockfiles(
                 manifest_payload=manifest_payload,
                 profile_name=profile_name,
                 python_version=python_version,
+                python_platform=python_platform,
                 direct_requirements=direct_requirements,
                 runner=runner,
             )
 
     metadata = manifest_payload.setdefault("metadata", {})
-    metadata.pop("python_platform", None)
+    if python_platform:
+        metadata["python_platform"] = python_platform
+    else:
+        metadata.pop("python_platform", None)
     metadata.pop("python_platforms", None)
     metadata["install_artifact_layout"] = "install/{profile}/{python}/"
     BundleManifest.model_validate(manifest_payload)
@@ -68,6 +74,7 @@ def _solve_install_target(
     manifest_payload: dict,
     profile_name: str,
     python_version: str,
+    python_platform: str | None,
     direct_requirements: list[str],
     runner: CommandRunner,
 ) -> None:
@@ -79,6 +86,9 @@ def _solve_install_target(
     with TemporaryDirectory() as temp_dir:
         requirements_path = Path(temp_dir) / "requirements.in"
         requirements_path.write_text("\n".join(direct_requirements) + "\n")
+        platform_args = (
+            ["--python-platform", python_platform] if python_platform else []
+        )
         runner(
             [
                 "uv",
@@ -87,6 +97,7 @@ def _solve_install_target(
                 str(requirements_path),
                 "--python-version",
                 python_version,
+                *platform_args,
                 "--format",
                 "requirements.txt",
                 "--generate-hashes",
@@ -102,6 +113,7 @@ def _solve_install_target(
                 str(requirements_path),
                 "--python-version",
                 python_version,
+                *platform_args,
                 "--format",
                 "pylock.toml",
                 "--output-file",
