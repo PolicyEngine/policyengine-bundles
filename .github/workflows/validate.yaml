@@ -53,7 +53,20 @@ jobs:
       - name: Solve lockfiles
         run: python scripts/solve_lockfiles.py .tmp/bundle-4.4.3
       - name: Validate bundle
-        run: python scripts/validate_bundle.py .tmp/bundle-4.4.3
+        run: python scripts/validate_bundle.py .tmp/bundle-4.4.3 --skip-data-verification
+      - name: Verify default US data artifact
+        run: |
+          python - <<'PY'
+          from policyengine_bundles.bundle_validation import verify_artifact_uri
+
+          uri = "hf://model/policyengine/policyengine-us-data@1.110.12/enhanced_cps_2024.h5"
+          expected_sha256 = "58a6639f7511b8d804701417e2647f0c3a77f51a3d90441037eaf004b1f00761"
+          expected_size = 109844730
+          actual = verify_artifact_uri(uri)
+          assert actual.sha256 == expected_sha256, actual
+          assert actual.size_bytes == expected_size, actual
+          print(f"default US data artifact ok: {uri}")
+          PY
       - name: Compare regenerated bundle to committed bundle
         run: python scripts/compare_bundle_directories.py bundles/4.4.3 .tmp/bundle-4.4.3
       - uses: actions/upload-artifact@v4
