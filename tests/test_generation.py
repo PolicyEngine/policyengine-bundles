@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from conftest import fake_resolver, release_manifest, write_candidate, write_json
 
-from policyengine_bundles.generation import generate_bundle
+from policyengine_bundles.generation import LoadedManifest, generate_bundle
 from policyengine_bundles.validation import load_bundle_directory
 
 
@@ -296,3 +296,42 @@ def test_generate_bundle_embeds_local_manifest_when_requested(
         bundle.countries["us"].metadata["input_release_manifest_uri"]
         == release_path.as_uri()
     )
+
+
+def test_generate_bundle_rewrites_artifacts_to_loaded_hf_revision(
+    tmp_path: Path,
+) -> None:
+    payload = release_manifest(data_package_version="1.113.1")
+    content = json.dumps(payload, sort_keys=True).encode()
+    candidate_path = write_candidate(
+        tmp_path,
+        "hf://model/policyengine/policyengine-us-data@abc123/releases/1.113.1/release_manifest.json",
+    )
+    output_dir = tmp_path / "bundle"
+
+    def manifest_loader(uri: str) -> LoadedManifest:
+        return LoadedManifest(
+            payload=payload,
+            uri=uri,
+            sha256="d" * 64,
+            content=content,
+            repo_id="policyengine/policyengine-us-data",
+            repo_type="model",
+            revision="abc123",
+            path="releases/1.113.1/release_manifest.json",
+        )
+
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        manifest_loader=manifest_loader,
+    )
+
+    country = load_bundle_directory(output_dir).countries["us"]
+    artifact = country.datasets["enhanced_cps_2024"]
+    assert country.data_package.version == "1.113.1"
+    assert country.artifact_release.version == "abc123"
+    assert artifact.revision == "abc123"
+    assert artifact.uri is not None
+    assert "@abc123/" in artifact.uri

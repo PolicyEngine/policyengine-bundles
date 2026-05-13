@@ -28,7 +28,7 @@ jobs:
       - name: Lint
         run: ruff check .
 
-  certify-live-4-4-3:
+  certify-latest-bundle:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     env:
@@ -45,31 +45,46 @@ jobs:
         run: test -n "$HUGGING_FACE_TOKEN"
       - name: Create work directory
         run: mkdir -p .tmp
+      - name: Select latest candidate
+        id: latest
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+
+          def version_key(version: str) -> tuple[int, ...]:
+              return tuple(int(part) for part in version.split("."))
+
+          candidates = []
+          for path in Path("candidates").glob("*-all.json"):
+              payload = json.loads(path.read_text())
+              version = payload["bundle_version"]
+              candidates.append((version_key(version), version, path))
+
+          if not candidates:
+              raise SystemExit("No bundle candidates found.")
+
+          _, version, path = max(candidates)
+          print(f"bundle_version={version}")
+          print(f"candidate={path.as_posix()}")
+          print(f"output=.tmp/bundle-{version}")
+          print(f"committed=bundles/{version}")
+          PY
       - name: Generate bundle
         run: |
           python scripts/generate_bundle.py \
-            --input candidates/4.4.3-all.json \
-            --output .tmp/bundle-4.4.3
+            --input "${{ steps.latest.outputs.candidate }}" \
+            --output "${{ steps.latest.outputs.output }}"
       - name: Solve lockfiles
-        run: python scripts/solve_lockfiles.py .tmp/bundle-4.4.3
+        run: python scripts/solve_lockfiles.py "${{ steps.latest.outputs.output }}"
       - name: Validate bundle
-        run: python scripts/validate_bundle.py .tmp/bundle-4.4.3 --skip-data-verification
-      - name: Verify default US data artifact
-        run: |
-          python - <<'PY'
-          from policyengine_bundles.bundle_validation import verify_artifact_uri
-
-          uri = "hf://model/policyengine/policyengine-us-data@1.110.12/enhanced_cps_2024.h5"
-          expected_sha256 = "58a6639f7511b8d804701417e2647f0c3a77f51a3d90441037eaf004b1f00761"
-          expected_size = 109844730
-          actual = verify_artifact_uri(uri)
-          assert actual.sha256 == expected_sha256, actual
-          assert actual.size_bytes == expected_size, actual
-          print(f"default US data artifact ok: {uri}")
-          PY
+        run: python scripts/validate_bundle.py "${{ steps.latest.outputs.output }}"
       - name: Compare regenerated bundle to committed bundle
-        run: python scripts/compare_bundle_directories.py bundles/4.4.3 .tmp/bundle-4.4.3
+        run: |
+          python scripts/compare_bundle_directories.py \
+            "${{ steps.latest.outputs.committed }}" \
+            "${{ steps.latest.outputs.output }}"
       - uses: actions/upload-artifact@v4
         with:
-          name: policyengine-bundle-4.4.3-all
-          path: .tmp/bundle-4.4.3
+          name: policyengine-bundle-${{ steps.latest.outputs.bundle_version }}-all
+          path: ${{ steps.latest.outputs.output }}
