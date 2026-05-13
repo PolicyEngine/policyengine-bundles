@@ -15,12 +15,16 @@ jobs:
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.11.14"
       - name: Install validation tooling
         run: python -m pip install --upgrade -e ".[dev]"
       - name: Validate schemas and example manifests
         run: python scripts/validate_schemas.py
       - name: Validate typed models
         run: python scripts/validate_models.py
+      - name: Verify committed bundle digests
+        run: python scripts/verify_bundle_digests.py
       - name: Run tests
         run: pytest
       - name: Check formatting
@@ -28,7 +32,7 @@ jobs:
       - name: Lint
         run: ruff check .
 
-  certify-latest-bundle:
+  certify-live-4-4-5:
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     env:
@@ -39,52 +43,26 @@ jobs:
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@v8.1.0
+        with:
+          version: "0.11.14"
       - name: Install validation tooling
         run: python -m pip install --upgrade -e ".[dev]"
       - name: Confirm private data access is configured
         run: test -n "$HUGGING_FACE_TOKEN"
       - name: Create work directory
         run: mkdir -p .tmp
-      - name: Select latest candidate
-        id: latest
-        run: |
-          python - <<'PY' >> "$GITHUB_OUTPUT"
-          import json
-          from pathlib import Path
-
-          def version_key(version: str) -> tuple[int, ...]:
-              return tuple(int(part) for part in version.split("."))
-
-          candidates = []
-          for path in Path("candidates").glob("*-all.json"):
-              payload = json.loads(path.read_text())
-              version = payload["bundle_version"]
-              candidates.append((version_key(version), version, path))
-
-          if not candidates:
-              raise SystemExit("No bundle candidates found.")
-
-          _, version, path = max(candidates)
-          print(f"bundle_version={version}")
-          print(f"candidate={path.as_posix()}")
-          print(f"output=.tmp/bundle-{version}")
-          print(f"committed=bundles/{version}")
-          PY
       - name: Generate bundle
         run: |
           python scripts/generate_bundle.py \
-            --input "${{ steps.latest.outputs.candidate }}" \
-            --output "${{ steps.latest.outputs.output }}"
+            --input candidates/4.4.5-all.json \
+            --output .tmp/bundle-4.4.5
       - name: Solve lockfiles
-        run: python scripts/solve_lockfiles.py "${{ steps.latest.outputs.output }}"
+        run: python scripts/solve_lockfiles.py .tmp/bundle-4.4.5
       - name: Validate bundle
-        run: python scripts/validate_bundle.py "${{ steps.latest.outputs.output }}"
+        run: python scripts/validate_bundle.py .tmp/bundle-4.4.5
       - name: Compare regenerated bundle to committed bundle
-        run: |
-          python scripts/compare_bundle_directories.py \
-            "${{ steps.latest.outputs.committed }}" \
-            "${{ steps.latest.outputs.output }}"
+        run: python scripts/compare_bundle_directories.py bundles/4.4.5 .tmp/bundle-4.4.5
       - uses: actions/upload-artifact@v4
         with:
-          name: policyengine-bundle-${{ steps.latest.outputs.bundle_version }}-all
-          path: ${{ steps.latest.outputs.output }}
+          name: policyengine-bundle-4.4.5-all
+          path: .tmp/bundle-4.4.5

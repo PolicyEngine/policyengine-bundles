@@ -25,6 +25,7 @@ from policyengine_bundles.models import (
     DataReleaseManifest,
     PackagePin,
     Profile,
+    ResolverPolicy,
     RuntimeComponentMetadata,
     ValidationCheck,
     ValidationReport,
@@ -35,6 +36,13 @@ from policyengine_bundles.validation import load_bundle_directory
 
 PackageResolver = Callable[[str, str], PackagePin]
 ManifestLoader = Callable[[str], "LoadedManifest"]
+
+US_DATA_PACKAGE = "policyengine-us-data"
+UNCERTIFIED_US_ANALYTICS_ARTIFACT_KINDS = {"database"}
+US_ANALYTICS_ARTIFACT_MISSING_REASON = (
+    "US analytics artifacts are recorded for discovery but are not part of "
+    "bundle data certification yet."
+)
 
 
 class CandidateCountry(BundleModel):
@@ -47,6 +55,7 @@ class BundleCandidate(BundleModel):
     bundle_version: str
     policyengine_version: str
     python_versions: list[str] = Field(min_length=1)
+    resolver: ResolverPolicy = Field(default_factory=lambda: ResolverPolicy(name="uv"))
     profiles: list[str]
     packages: dict[str, str]
     countries: dict[str, CandidateCountry]
@@ -244,6 +253,7 @@ def generate_bundle(
         created_at=created_at,
         metadata={
             "python_versions": candidate.python_versions,
+            "resolver": candidate.resolver.model_dump(exclude_none=True),
             "generated_by": "scripts/generate_bundle.py",
             "testing_only": testing_only,
         },
@@ -268,11 +278,21 @@ def _resolve_package_pins(
     candidate: BundleCandidate,
     package_resolver: PackageResolver,
 ) -> dict[str, PackagePin]:
-    versions = {"policyengine": candidate.policyengine_version, **candidate.packages}
-    return {
-        name: _require_exact_pin(package_resolver(name, version))
-        for name, version in versions.items()
+    pins = {
+        "policyengine": PackagePin(
+            name="policyengine",
+            version=candidate.policyengine_version,
+            resolution_status="pinned",
+            role="bundle_carrier",
+        )
     }
+    pins.update(
+        {
+            name: _require_exact_pin(package_resolver(name, version))
+            for name, version in candidate.packages.items()
+        }
+    )
+    return pins
 
 
 def _require_exact_pin(pin: PackagePin) -> PackagePin:
@@ -295,7 +315,6 @@ def _build_country_bundle(
     release_manifest_path: str | None,
 ) -> CountryBundle:
     release = DataReleaseManifest.model_validate(loaded_manifest.payload)
-    release = _rewrite_artifacts_to_loaded_revision(release, loaded_manifest)
     model_package = packages[country.model_package]
     core_package = packages["policyengine-core"]
     build = _require_build_metadata(release)
@@ -351,7 +370,7 @@ def _build_country_bundle(
         data_package=data_package,
         artifact_release=artifact_release,
         default_dataset=default_dataset,
-        datasets=release.artifacts,
+        datasets=_bundle_datasets(release),
         certification=CountryCertification(
             compatibility_basis="release_manifest_exact_compatibility",
             built_with_model_package=_metadata_to_package_pin(
@@ -374,6 +393,43 @@ def _build_country_bundle(
             "input_release_manifest_uri": loaded_manifest.uri,
             "input_release_manifest_sha256": loaded_manifest.sha256,
         },
+    )
+
+
+def _bundle_datasets(release: DataReleaseManifest) -> dict[str, DataArtifact]:
+    return {
+        artifact_key: _bundle_data_artifact(release, artifact)
+        for artifact_key, artifact in release.artifacts.items()
+    }
+
+
+def _bundle_data_artifact(
+    release: DataReleaseManifest,
+    artifact: DataArtifact,
+) -> DataArtifact:
+    if not _is_uncertified_us_analytics_artifact(release, artifact):
+        return artifact
+
+    metadata = dict(artifact.metadata)
+    metadata["certification_exemption"] = "us_analytics_artifact"
+    return artifact.model_copy(
+        update={
+            "status": "unverified",
+            "sha256": None,
+            "size_bytes": None,
+            "missing_reason": US_ANALYTICS_ARTIFACT_MISSING_REASON,
+            "metadata": metadata,
+        }
+    )
+
+
+def _is_uncertified_us_analytics_artifact(
+    release: DataReleaseManifest,
+    artifact: DataArtifact,
+) -> bool:
+    return (
+        release.data_package.name == US_DATA_PACKAGE
+        and artifact.kind in UNCERTIFIED_US_ANALYTICS_ARTIFACT_KINDS
     )
 
 
@@ -487,86 +543,12 @@ def _artifact_release(
         repo_type=metadata_release.get("repo_type")
         or loaded_manifest.repo_type
         or "model",
-        version=loaded_manifest.revision
-        or metadata_release.get("version")
+        version=metadata_release.get("version")
+        or loaded_manifest.revision
         or release.data_package.version,
         release_manifest_uri=release_manifest_uri,
         release_manifest_sha256=loaded_manifest.sha256,
     )
-
-
-def _rewrite_artifacts_to_loaded_revision(
-    release: DataReleaseManifest,
-    loaded_manifest: LoadedManifest,
-) -> DataReleaseManifest:
-    if not loaded_manifest.repo_id or not loaded_manifest.revision:
-        return release
-
-    metadata_release = release.metadata.get("artifact_release", {})
-    replaceable_revisions = {
-        value
-        for value in (
-            release.data_package.version,
-            metadata_release.get("version"),
-            loaded_manifest.revision,
-        )
-        if value
-    }
-    artifacts = {
-        key: _rewrite_artifact_to_revision(
-            artifact,
-            repo_id=loaded_manifest.repo_id,
-            revision=loaded_manifest.revision,
-            replaceable_revisions=replaceable_revisions,
-        )
-        for key, artifact in release.artifacts.items()
-    }
-    if artifacts == release.artifacts:
-        return release
-    return release.model_copy(update={"artifacts": artifacts})
-
-
-def _rewrite_artifact_to_revision(
-    artifact: DataArtifact,
-    *,
-    repo_id: str,
-    revision: str,
-    replaceable_revisions: set[str],
-) -> DataArtifact:
-    parsed_uri = _parse_artifact_uri(artifact.uri)
-    artifact_repo_id = artifact.repo_id or (parsed_uri.repo_id if parsed_uri else None)
-    artifact_revision = artifact.revision or (
-        parsed_uri.revision if parsed_uri else None
-    )
-    if artifact_repo_id != repo_id or artifact_revision not in replaceable_revisions:
-        return artifact
-
-    updates: dict[str, str] = {}
-    if artifact.revision is not None:
-        updates["revision"] = revision
-    if (
-        parsed_uri is not None
-        and parsed_uri.repo_id == repo_id
-        and parsed_uri.revision in replaceable_revisions
-    ):
-        updates["uri"] = HuggingFaceReference(
-            repo_type=parsed_uri.repo_type,
-            repo_id=parsed_uri.repo_id,
-            revision=revision,
-            path=parsed_uri.path,
-        ).to_uri()
-    if not updates:
-        return artifact
-    return artifact.model_copy(update=updates)
-
-
-def _parse_artifact_uri(uri: str | None) -> HuggingFaceReference | None:
-    if uri is None:
-        return None
-    try:
-        return HuggingFaceReference.parse(uri)
-    except ValueError:
-        return None
 
 
 def _first_artifact_repo_id(artifacts: Mapping[str, DataArtifact]) -> str | None:

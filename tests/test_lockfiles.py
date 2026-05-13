@@ -31,6 +31,8 @@ def test_solve_lockfiles_records_generated_install_artifacts(tmp_path: Path) -> 
 
     def fake_runner(command: list[str]) -> None:
         commands.append(command)
+        requirements_path = Path(command[3])
+        assert "policyengine==4.4.0" not in requirements_path.read_text()
         output_path = Path(command[command.index("--output-file") + 1])
         output_path.write_text("# generated\n")
 
@@ -51,17 +53,15 @@ def test_solve_lockfiles_records_generated_install_artifacts(tmp_path: Path) -> 
     assert len(commands) == 2
     assert commands[0][0:3] == ["uv", "pip", "compile"]
     assert "--generate-hashes" in commands[0]
-    assert commands[0][commands[0].index("--python-platform") + 1] == (
-        DEFAULT_PYTHON_PLATFORM
-    )
-    assert commands[1][commands[1].index("--python-platform") + 1] == (
-        DEFAULT_PYTHON_PLATFORM
-    )
+    assert "--python-platform" not in commands[0]
+    assert "--python-platform" not in commands[1]
+    assert "--universal" in commands[0]
+    assert "--universal" in commands[1]
     assert commands[1][commands[1].index("--format") + 1] == "pylock.toml"
     assert bundle.manifest.metadata["install_artifact_layout"] == (
         "install/{profile}/{python}/"
     )
-    assert bundle.manifest.metadata["python_platform"] == DEFAULT_PYTHON_PLATFORM
+    assert "python_platform" not in bundle.manifest.metadata
     assert "python_platforms" not in bundle.manifest.metadata
 
 
@@ -87,6 +87,62 @@ def test_solve_lockfiles_uses_all_declared_python_versions(tmp_path: Path) -> No
         for command in commands
         if command[command.index("--format") + 1] == "requirements.txt"
     ] == ["3.13", "3.14"]
+
+
+def test_solve_lockfiles_applies_resolver_policy(tmp_path: Path) -> None:
+    bundle_dir = generated_bundle(tmp_path)
+    bundle_json = bundle_dir / "bundle.json"
+    payload = json.loads(bundle_json.read_text())
+    payload["metadata"]["resolver"] = {
+        "name": "uv",
+        "resolution": "highest",
+        "exclude_newer": "2026-05-09T10:39:06Z",
+        "universal": True,
+    }
+    write_json(bundle_json, payload)
+    commands: list[list[str]] = []
+
+    def fake_runner(command: list[str]) -> None:
+        commands.append(command)
+        output_path = Path(command[command.index("--output-file") + 1])
+        output_path.write_text("# generated\n")
+
+    solve_lockfiles(bundle_dir, runner=fake_runner)
+
+    assert len(commands) == 2
+    for command in commands:
+        assert command[command.index("--resolution") + 1] == "highest"
+        assert command[command.index("--exclude-newer") + 1] == ("2026-05-09T10:39:06Z")
+        assert "--universal" in command
+
+
+def test_solve_lockfiles_records_platform_for_non_universal_policy(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle(tmp_path)
+    bundle_json = bundle_dir / "bundle.json"
+    payload = json.loads(bundle_json.read_text())
+    payload["metadata"]["resolver"] = {
+        "name": "uv",
+        "universal": False,
+    }
+    write_json(bundle_json, payload)
+    commands: list[list[str]] = []
+
+    def fake_runner(command: list[str]) -> None:
+        commands.append(command)
+        output_path = Path(command[command.index("--output-file") + 1])
+        output_path.write_text("# generated\n")
+
+    solve_lockfiles(bundle_dir, runner=fake_runner)
+
+    bundle = load_bundle_directory(bundle_dir)
+    for command in commands:
+        assert command[command.index("--python-platform") + 1] == (
+            DEFAULT_PYTHON_PLATFORM
+        )
+        assert "--universal" not in command
+    assert bundle.manifest.metadata["python_platform"] == DEFAULT_PYTHON_PLATFORM
 
 
 def test_solve_lockfiles_requires_declared_python_versions(tmp_path: Path) -> None:

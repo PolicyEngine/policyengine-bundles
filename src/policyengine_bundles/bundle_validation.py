@@ -462,6 +462,8 @@ def _validate_profile_runtime(
     with TemporaryDirectory() as temp_dir:
         venv = Path(temp_dir) / "venv"
         python = venv / ("Scripts/python.exe" if _is_windows() else "bin/python")
+        runtime_package_names = _runtime_package_names(bundle, profile.packages)
+        uses_bundle_carrier = _profile_uses_bundle_carrier(bundle, profile.packages)
         commands = [
             (
                 "create_venv",
@@ -490,26 +492,30 @@ def _validate_profile_runtime(
                 [
                     str(python),
                     "-c",
-                    _package_version_check_code(bundle, profile.packages),
-                ],
-            ),
-            (
-                "import_smoke",
-                [
-                    str(python),
-                    "-c",
-                    _import_smoke_code(profile.packages),
+                    _package_version_check_code(bundle, runtime_package_names),
                 ],
             ),
         ]
-        commands.extend(
-            (
-                f"{country_id}_household_smoke",
-                [str(python), "-c", _household_smoke_code(country_id)],
+        if runtime_package_names:
+            commands.append(
+                (
+                    "import_smoke",
+                    [
+                        str(python),
+                        "-c",
+                        _import_smoke_code(runtime_package_names),
+                    ],
+                )
             )
-            for country_id in profile.countries
-            if country_id in {"us", "uk"}
-        )
+        if not uses_bundle_carrier:
+            commands.extend(
+                (
+                    f"{country_id}_household_smoke",
+                    [str(python), "-c", _household_smoke_code(country_id)],
+                )
+                for country_id in profile.countries
+                if country_id in {"us", "uk"}
+            )
         for name, command in commands:
             checks.append(
                 _run_check(
@@ -522,6 +528,27 @@ def _validate_profile_runtime(
                 )
             )
     return checks
+
+
+def _runtime_package_names(
+    bundle: BundleDirectory,
+    package_names: Sequence[str],
+) -> list[str]:
+    return [
+        package_name
+        for package_name in package_names
+        if not bundle.manifest.packages[package_name].is_bundle_carrier
+    ]
+
+
+def _profile_uses_bundle_carrier(
+    bundle: BundleDirectory,
+    package_names: Sequence[str],
+) -> bool:
+    return any(
+        bundle.manifest.packages[package_name].is_bundle_carrier
+        for package_name in package_names
+    )
 
 
 def _validate_lockfile(

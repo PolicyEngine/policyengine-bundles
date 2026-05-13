@@ -1,0 +1,36 @@
+{
+  "countries": {
+    "uk": {
+      "data_release_manifest_uri": "hf://model/policyengine/policyengine-uk-data-private@1.55.5/release_manifest.json",
+      "model_package": "policyengine-uk"
+    },
+    "us": {
+      "data_release_manifest_uri": "hf://model/policyengine/policyengine-us-data@99e0ec7e784cdba43dd21ff1d80a081599a7a537/releases/1.113.1/release_manifest.json",
+      "model_package": "policyengine-us"
+    }
+  },
+  "bundle_version": "4.4.5",
+  "packages": {
+    "policyengine-core": "3.26.1",
+    "policyengine-uk": "2.88.14",
+    "policyengine-us": "1.691.3"
+  },
+  "policyengine_version": "4.4.5",
+  "profiles": [
+    "us",
+    "uk",
+    "all"
+  ],
+  "python_versions": [
+    "3.13",
+    "3.14"
+  ],
+  "resolver": {
+    "exclude_newer": "2026-05-12T17:00:00Z",
+    "name": "uv",
+    "resolution": "highest",
+    "universal": true,
+    "version": "0.11.14"
+  },
+  "schema_version": 1
+}

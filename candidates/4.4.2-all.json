@@ -24,5 +24,12 @@
   "python_versions": [
     "3.13"
   ],
+  "resolver": {
+    "exclude_newer": "2026-05-09T10:39:06Z",
+    "name": "uv",
+    "resolution": "highest",
+    "universal": true,
+    "version": "0.8.5"
+  },
   "schema_version": 1
 }

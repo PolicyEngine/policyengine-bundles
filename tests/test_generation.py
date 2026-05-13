@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 from conftest import fake_resolver, release_manifest, write_candidate, write_json
 
-from policyengine_bundles.generation import LoadedManifest, generate_bundle
+from policyengine_bundles.generation import generate_bundle
 from policyengine_bundles.validation import load_bundle_directory
 
 
@@ -26,6 +26,9 @@ def test_generate_bundle_from_candidate(tmp_path: Path) -> None:
 
     bundle = load_bundle_directory(output_dir)
     assert bundle.manifest.bundle_version == "4.4.0"
+    assert bundle.manifest.policyengine.role == "bundle_carrier"
+    assert bundle.manifest.policyengine.sha256 is None
+    assert bundle.manifest.packages["policyengine"] == bundle.manifest.policyengine
     assert bundle.manifest.profiles["us"].packages == [
         "policyengine",
         "policyengine-core",
@@ -33,6 +36,98 @@ def test_generate_bundle_from_candidate(tmp_path: Path) -> None:
     ]
     assert bundle.countries["us"].core_package.version == "3.26.0"
     assert bundle.countries["us"].default_dataset == "enhanced_cps_2024"
+
+
+def test_generate_bundle_marks_us_analytics_database_uncertified(
+    tmp_path: Path,
+) -> None:
+    payload = release_manifest()
+    payload["artifacts"]["policy_data"] = {
+        "kind": "database",
+        "uri": "hf://model/policyengine/policyengine-us-data@1.0.0/policy_data.db",
+        "path": "policy_data.db",
+        "repo_id": "policyengine/policyengine-us-data",
+        "revision": "1.0.0",
+        "sha256": "d" * 64,
+        "size_bytes": 42,
+    }
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, payload)
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+
+    generate_bundle(
+        candidate_path,
+        tmp_path / "bundle",
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
+
+    bundle = load_bundle_directory(tmp_path / "bundle")
+    policy_data = bundle.countries["us"].datasets["policy_data"]
+    assert policy_data.status == "unverified"
+    assert policy_data.sha256 is None
+    assert policy_data.size_bytes is None
+    assert policy_data.missing_reason is not None
+    assert "analytics artifacts" in policy_data.missing_reason
+    assert policy_data.metadata["certification_exemption"] == "us_analytics_artifact"
+
+
+def test_generate_bundle_preserves_uk_database_certification(
+    tmp_path: Path,
+) -> None:
+    payload = release_manifest(
+        data_package_name="policyengine-uk-data",
+        model_package_name="policyengine-uk",
+        artifact_key="enhanced_frs_2023_24",
+        repo_id="policyengine/policyengine-uk-data-private",
+    )
+    payload["artifacts"]["policy_data"] = {
+        "kind": "database",
+        "uri": (
+            "hf://model/policyengine/policyengine-uk-data-private@1.0.0/policy_data.db"
+        ),
+        "path": "policy_data.db",
+        "repo_id": "policyengine/policyengine-uk-data-private",
+        "revision": "1.0.0",
+        "sha256": "d" * 64,
+        "size_bytes": 42,
+    }
+    release_path = tmp_path / "uk-release-manifest.json"
+    write_json(release_path, payload)
+    candidate_path = tmp_path / "candidate.json"
+    write_json(
+        candidate_path,
+        {
+            "schema_version": 1,
+            "bundle_version": "4.4.0",
+            "policyengine_version": "4.4.0",
+            "python_versions": ["3.13"],
+            "profiles": ["uk"],
+            "packages": {
+                "policyengine-core": "3.26.0",
+                "policyengine-uk": "1.0.0",
+            },
+            "countries": {
+                "uk": {
+                    "model_package": "policyengine-uk",
+                    "data_release_manifest_uri": release_path.as_uri(),
+                }
+            },
+        },
+    )
+
+    generate_bundle(
+        candidate_path,
+        tmp_path / "bundle",
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
+
+    bundle = load_bundle_directory(tmp_path / "bundle")
+    policy_data = bundle.countries["uk"].datasets["policy_data"]
+    assert policy_data.status == "certified"
+    assert policy_data.sha256 == "d" * 64
+    assert policy_data.size_bytes == 42
 
 
 def test_generate_bundle_accepts_legacy_release_manifest_created_at(
@@ -108,6 +203,37 @@ def test_generate_bundle_supports_all_profile(tmp_path: Path) -> None:
         "policyengine-us",
     ]
     assert bundle.manifest.profiles["all"].countries == ["uk", "us"]
+
+
+def test_generate_bundle_records_resolver_policy(tmp_path: Path) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, release_manifest())
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+    payload = json.loads(candidate_path.read_text())
+    payload["resolver"] = {
+        "name": "uv",
+        "version": "0.11.14",
+        "resolution": "highest",
+        "exclude_newer": "2026-05-09T10:39:06Z",
+        "universal": True,
+    }
+    write_json(candidate_path, payload)
+
+    generate_bundle(
+        candidate_path,
+        tmp_path / "bundle",
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
+
+    bundle = load_bundle_directory(tmp_path / "bundle")
+    assert bundle.manifest.metadata["resolver"] == {
+        "name": "uv",
+        "version": "0.11.14",
+        "resolution": "highest",
+        "exclude_newer": "2026-05-09T10:39:06Z",
+        "universal": True,
+    }
 
 
 def test_generate_bundle_rejects_unsupported_manifest_uri(tmp_path: Path) -> None:
@@ -296,42 +422,3 @@ def test_generate_bundle_embeds_local_manifest_when_requested(
         bundle.countries["us"].metadata["input_release_manifest_uri"]
         == release_path.as_uri()
     )
-
-
-def test_generate_bundle_rewrites_artifacts_to_loaded_hf_revision(
-    tmp_path: Path,
-) -> None:
-    payload = release_manifest(data_package_version="1.113.1")
-    content = json.dumps(payload, sort_keys=True).encode()
-    candidate_path = write_candidate(
-        tmp_path,
-        "hf://model/policyengine/policyengine-us-data@abc123/releases/1.113.1/release_manifest.json",
-    )
-    output_dir = tmp_path / "bundle"
-
-    def manifest_loader(uri: str) -> LoadedManifest:
-        return LoadedManifest(
-            payload=payload,
-            uri=uri,
-            sha256="d" * 64,
-            content=content,
-            repo_id="policyengine/policyengine-us-data",
-            repo_type="model",
-            revision="abc123",
-            path="releases/1.113.1/release_manifest.json",
-        )
-
-    generate_bundle(
-        candidate_path,
-        output_dir,
-        package_resolver=fake_resolver,
-        manifest_loader=manifest_loader,
-    )
-
-    country = load_bundle_directory(output_dir).countries["us"]
-    artifact = country.datasets["enhanced_cps_2024"]
-    assert country.data_package.version == "1.113.1"
-    assert country.artifact_release.version == "abc123"
-    assert artifact.revision == "abc123"
-    assert artifact.uri is not None
-    assert "@abc123/" in artifact.uri

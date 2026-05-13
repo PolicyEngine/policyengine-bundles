@@ -59,8 +59,13 @@ def test_validate_bundle_runs_profile_checks(tmp_path: Path) -> None:
     check_names = {check.name for check in report.checks}
     assert "data_release_manifest_contract" in check_names
     assert "verify_direct_package_versions" in check_names
-    assert "us_household_smoke" in check_names
+    assert "import_smoke" in check_names
+    assert "us_household_smoke" not in check_names
     assert any(command[0] == "uv" and command[1] == "venv" for command in commands)
+    assert any("import policyengine_core\n" in command[-1] for command in commands)
+    assert any("import policyengine_us\n" in command[-1] for command in commands)
+    assert all('"policyengine":' not in command[-1] for command in commands)
+    assert all("import policyengine\n" not in command[-1] for command in commands)
     assert all(
         "validated_on_platform" in check.details
         for check in report.checks
@@ -346,6 +351,54 @@ def test_validate_bundle_fails_when_artifact_hash_mismatches(
         check.name == "data_release_manifest_contract" and check.status == "failed"
         for check in report.checks
     )
+
+
+def test_validate_bundle_does_not_hash_uncertified_us_analytics_artifacts(
+    tmp_path: Path,
+) -> None:
+    payload = release_manifest()
+    payload["artifacts"]["policy_data"] = {
+        "kind": "database",
+        "uri": "hf://model/policyengine/policyengine-us-data@1.0.0/policy_data.db",
+        "path": "policy_data.db",
+        "repo_id": "policyengine/policyengine-us-data",
+        "revision": "1.0.0",
+        "sha256": "d" * 64,
+        "size_bytes": 42,
+    }
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, payload)
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+    output_dir = tmp_path / "bundle"
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        testing_only=True,
+    )
+
+    def fake_lock_runner(command: list[str]) -> None:
+        output_path = Path(command[command.index("--output-file") + 1])
+        output_path.write_text("# generated\n")
+
+    solve_lockfiles(output_dir, runner=fake_lock_runner)
+
+    verified_uris: list[str] = []
+
+    def artifact_verifier(uri: str) -> ArtifactVerification:
+        verified_uris.append(uri)
+        if uri.startswith("file://"):
+            return verify_artifact_uri(uri)
+        return ArtifactVerification(sha256="c" * 64, size_bytes=12)
+
+    report = validate_bundle(
+        output_dir,
+        runner=lambda command: None,
+        artifact_verifier=artifact_verifier,
+    )
+
+    assert report.status == "passed"
+    assert not any("policy_data.db" in uri for uri in verified_uris)
 
 
 def test_validate_bundle_fails_when_lockfile_missing(tmp_path: Path) -> None:

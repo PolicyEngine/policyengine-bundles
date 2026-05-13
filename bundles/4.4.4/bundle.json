@@ -1,4 +1,5 @@
 {
+  "bundle_digest": "sha256:140e4b22d6c9b80371c335b0cf22862118424d69d7e687c2b9e2663ebffb4d27",
   "bundle_version": "4.4.4",
   "countries": {
     "uk": "countries/uk.json",

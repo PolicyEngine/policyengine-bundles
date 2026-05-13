@@ -1,0 +1,531 @@
+{
+  "bundle_version": "4.4.5",
+  "checks": [
+    {
+      "country": "uk",
+      "details": {},
+      "name": "data_release_manifest_contract",
+      "profile": "all",
+      "status": "passed"
+    },
+    {
+      "country": "us",
+      "details": {},
+      "name": "data_release_manifest_contract",
+      "profile": "all",
+      "status": "passed"
+    },
+    {
+      "country": "uk",
+      "details": {},
+      "name": "data_release_manifest_contract",
+      "profile": "uk",
+      "status": "passed"
+    },
+    {
+      "country": "us",
+      "details": {},
+      "name": "data_release_manifest_contract",
+      "profile": "us",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "declared_python_versions": [
+          "3.13",
+          "3.14"
+        ],
+        "install_targets": [
+          "py313",
+          "py314"
+        ]
+      },
+      "name": "install_targets_complete",
+      "profile": "all",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/all/py313/pylock.toml",
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "name": "lockfile_present",
+      "profile": "all",
+      "python_version": "3.13",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/all/py313/constraints.txt",
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "name": "constraints_present",
+      "profile": "all",
+      "python_version": "3.13",
+      "status": "passed"
+    },
+    {
+      "command": "uv venv --python 3.13 /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpqaf4r_iz/venv",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:46:48Z",
+      "name": "create_venv",
+      "profile": "all",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:46:48Z",
+      "status": "passed"
+    },
+    {
+      "command": "uv pip install --python /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpqaf4r_iz/venv/bin/python -r bundles/4.4.5/install/all/py313/constraints.txt",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:47:08Z",
+      "name": "install_constraints",
+      "profile": "all",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:46:48Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpqaf4r_iz/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine-core\": \"3.26.1\", \"policyengine-uk\": \"2.88.14\", \"policyengine-us\": \"1.691.3\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:47:09Z",
+      "name": "verify_direct_package_versions",
+      "profile": "all",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:47:08Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpqaf4r_iz/venv/bin/python -c import policyengine_core\nimport policyengine_uk\nimport policyengine_us\n",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:50:00Z",
+      "name": "import_smoke",
+      "profile": "all",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:47:09Z",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/all/py314/pylock.toml",
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "name": "lockfile_present",
+      "profile": "all",
+      "python_version": "3.14",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/all/py314/constraints.txt",
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "name": "constraints_present",
+      "profile": "all",
+      "python_version": "3.14",
+      "status": "passed"
+    },
+    {
+      "command": "uv venv --python 3.14 /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpzo18ud25/venv",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:50:23Z",
+      "name": "create_venv",
+      "profile": "all",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:50:23Z",
+      "status": "passed"
+    },
+    {
+      "command": "uv pip install --python /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpzo18ud25/venv/bin/python -r bundles/4.4.5/install/all/py314/constraints.txt",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:50:27Z",
+      "name": "install_constraints",
+      "profile": "all",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:50:23Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpzo18ud25/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine-core\": \"3.26.1\", \"policyengine-uk\": \"2.88.14\", \"policyengine-us\": \"1.691.3\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:50:28Z",
+      "name": "verify_direct_package_versions",
+      "profile": "all",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:50:27Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpzo18ud25/venv/bin/python -c import policyengine_core\nimport policyengine_uk\nimport policyengine_us\n",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:52:53Z",
+      "name": "import_smoke",
+      "profile": "all",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:50:28Z",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "declared_python_versions": [
+          "3.13",
+          "3.14"
+        ],
+        "install_targets": [
+          "py313",
+          "py314"
+        ]
+      },
+      "name": "install_targets_complete",
+      "profile": "uk",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/uk/py313/pylock.toml",
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "name": "lockfile_present",
+      "profile": "uk",
+      "python_version": "3.13",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/uk/py313/constraints.txt",
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "name": "constraints_present",
+      "profile": "uk",
+      "python_version": "3.13",
+      "status": "passed"
+    },
+    {
+      "command": "uv venv --python 3.13 /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmp52g2q0sf/venv",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:53:08Z",
+      "name": "create_venv",
+      "profile": "uk",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:53:08Z",
+      "status": "passed"
+    },
+    {
+      "command": "uv pip install --python /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmp52g2q0sf/venv/bin/python -r bundles/4.4.5/install/uk/py313/constraints.txt",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:53:10Z",
+      "name": "install_constraints",
+      "profile": "uk",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:53:08Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmp52g2q0sf/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine-core\": \"3.26.1\", \"policyengine-uk\": \"2.88.14\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:53:10Z",
+      "name": "verify_direct_package_versions",
+      "profile": "uk",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:53:10Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmp52g2q0sf/venv/bin/python -c import policyengine_core\nimport policyengine_uk\n",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:54:07Z",
+      "name": "import_smoke",
+      "profile": "uk",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:53:10Z",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/uk/py314/pylock.toml",
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "name": "lockfile_present",
+      "profile": "uk",
+      "python_version": "3.14",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/uk/py314/constraints.txt",
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "name": "constraints_present",
+      "profile": "uk",
+      "python_version": "3.14",
+      "status": "passed"
+    },
+    {
+      "command": "uv venv --python 3.14 /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpp4ekfyv2/venv",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:54:12Z",
+      "name": "create_venv",
+      "profile": "uk",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:54:12Z",
+      "status": "passed"
+    },
+    {
+      "command": "uv pip install --python /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpp4ekfyv2/venv/bin/python -r bundles/4.4.5/install/uk/py314/constraints.txt",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:54:14Z",
+      "name": "install_constraints",
+      "profile": "uk",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:54:12Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpp4ekfyv2/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine-core\": \"3.26.1\", \"policyengine-uk\": \"2.88.14\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:54:14Z",
+      "name": "verify_direct_package_versions",
+      "profile": "uk",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:54:14Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpp4ekfyv2/venv/bin/python -c import policyengine_core\nimport policyengine_uk\n",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:55:06Z",
+      "name": "import_smoke",
+      "profile": "uk",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:54:14Z",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "declared_python_versions": [
+          "3.13",
+          "3.14"
+        ],
+        "install_targets": [
+          "py313",
+          "py314"
+        ]
+      },
+      "name": "install_targets_complete",
+      "profile": "us",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/us/py313/pylock.toml",
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "name": "lockfile_present",
+      "profile": "us",
+      "python_version": "3.13",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/us/py313/constraints.txt",
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "name": "constraints_present",
+      "profile": "us",
+      "python_version": "3.13",
+      "status": "passed"
+    },
+    {
+      "command": "uv venv --python 3.13 /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpeme2zdnx/venv",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:55:11Z",
+      "name": "create_venv",
+      "profile": "us",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:55:11Z",
+      "status": "passed"
+    },
+    {
+      "command": "uv pip install --python /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpeme2zdnx/venv/bin/python -r bundles/4.4.5/install/us/py313/constraints.txt",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:55:13Z",
+      "name": "install_constraints",
+      "profile": "us",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:55:11Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpeme2zdnx/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine-core\": \"3.26.1\", \"policyengine-us\": \"1.691.3\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:55:13Z",
+      "name": "verify_direct_package_versions",
+      "profile": "us",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:55:13Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpeme2zdnx/venv/bin/python -c import policyengine_core\nimport policyengine_us\n",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:56:29Z",
+      "name": "import_smoke",
+      "profile": "us",
+      "python_version": "3.13",
+      "started_at": "2026-05-13T14:55:13Z",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/us/py314/pylock.toml",
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "name": "lockfile_present",
+      "profile": "us",
+      "python_version": "3.14",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/us/py314/constraints.txt",
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "name": "constraints_present",
+      "profile": "us",
+      "python_version": "3.14",
+      "status": "passed"
+    },
+    {
+      "command": "uv venv --python 3.14 /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpgbxqsfek/venv",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:56:42Z",
+      "name": "create_venv",
+      "profile": "us",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:56:42Z",
+      "status": "passed"
+    },
+    {
+      "command": "uv pip install --python /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpgbxqsfek/venv/bin/python -r bundles/4.4.5/install/us/py314/constraints.txt",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:56:44Z",
+      "name": "install_constraints",
+      "profile": "us",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:56:42Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpgbxqsfek/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine-core\": \"3.26.1\", \"policyengine-us\": \"1.691.3\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:56:45Z",
+      "name": "verify_direct_package_versions",
+      "profile": "us",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:56:44Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpgbxqsfek/venv/bin/python -c import policyengine_core\nimport policyengine_us\n",
+      "details": {
+        "target": "py314",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-05-13T14:58:18Z",
+      "name": "import_smoke",
+      "profile": "us",
+      "python_version": "3.14",
+      "started_at": "2026-05-13T14:56:45Z",
+      "status": "passed"
+    }
+  ],
+  "generated_at": "2026-05-13T14:58:27Z",
+  "metadata": {
+    "generated_by": "scripts/validate_bundle.py",
+    "validate_runtime": true,
+    "validation_scope": "full",
+    "verify_data": true
+  },
+  "schema_version": 1,
+  "status": "passed"
+}

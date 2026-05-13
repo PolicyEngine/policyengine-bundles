@@ -7,7 +7,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 
 from policyengine_bundles.io import write_json
-from policyengine_bundles.models import BundleManifest, PackagePin
+from policyengine_bundles.models import BundleManifest, PackagePin, ResolverPolicy
 from policyengine_bundles.python_versions import (
     metadata_python_versions,
     python_version_key,
@@ -36,6 +36,8 @@ def solve_lockfiles(
             "No supported Python versions declared. Include "
             "metadata.python_versions in bundle.json."
         )
+    resolver_policy = _resolver_policy(bundle.manifest.metadata)
+    effective_python_platform = None if resolver_policy.universal else python_platform
 
     manifest_payload = _load_bundle_manifest_payload(bundle_root)
     for profile_name, profile in bundle.manifest.profiles.items():
@@ -51,14 +53,15 @@ def solve_lockfiles(
                 manifest_payload=manifest_payload,
                 profile_name=profile_name,
                 python_version=python_version,
-                python_platform=python_platform,
+                python_platform=effective_python_platform,
                 direct_requirements=direct_requirements,
+                resolver_policy=resolver_policy,
                 runner=runner,
             )
 
     metadata = manifest_payload.setdefault("metadata", {})
-    if python_platform:
-        metadata["python_platform"] = python_platform
+    if effective_python_platform:
+        metadata["python_platform"] = effective_python_platform
     else:
         metadata.pop("python_platform", None)
     metadata.pop("python_platforms", None)
@@ -76,6 +79,7 @@ def _solve_install_target(
     python_version: str,
     python_platform: str | None,
     direct_requirements: list[str],
+    resolver_policy: ResolverPolicy,
     runner: CommandRunner,
 ) -> None:
     target_key = python_version_key(python_version)
@@ -98,6 +102,7 @@ def _solve_install_target(
                 "--python-version",
                 python_version,
                 *platform_args,
+                *_resolver_compile_args(resolver_policy),
                 "--format",
                 "requirements.txt",
                 "--generate-hashes",
@@ -114,6 +119,7 @@ def _solve_install_target(
                 "--python-version",
                 python_version,
                 *platform_args,
+                *_resolver_compile_args(resolver_policy),
                 "--format",
                 "pylock.toml",
                 "--output-file",
@@ -130,6 +136,24 @@ def _solve_install_target(
     )
 
 
+def _resolver_policy(metadata: dict) -> ResolverPolicy:
+    payload = metadata.get("resolver", {"name": "uv"})
+    return ResolverPolicy.model_validate(payload)
+
+
+def _resolver_compile_args(policy: ResolverPolicy) -> list[str]:
+    args: list[str] = []
+    if policy.name != "uv":
+        raise ValueError(f"Unsupported resolver {policy.name!r}.")
+    if policy.resolution:
+        args.extend(["--resolution", policy.resolution])
+    if policy.exclude_newer:
+        args.extend(["--exclude-newer", policy.exclude_newer])
+    if policy.universal:
+        args.append("--universal")
+    return args
+
+
 def _direct_requirements(
     *,
     profile_name: str,
@@ -143,6 +167,8 @@ def _direct_requirements(
                 f"Profile {profile_name!r} references unknown package {package_name!r}."
             )
         pin = packages[package_name]
+        if pin.is_bundle_carrier:
+            continue
         if pin.version is None or pin.resolution_status != "pinned":
             raise ValueError(
                 f"Profile {profile_name!r} package {package_name!r} must be "

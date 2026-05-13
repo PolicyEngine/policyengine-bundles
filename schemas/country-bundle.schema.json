@@ -415,6 +415,22 @@
           "default": null,
           "title": "Resolution Status"
         },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "runtime_dependency",
+                "bundle_carrier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
+        },
         "sdist_url": {
           "anyOf": [
             {

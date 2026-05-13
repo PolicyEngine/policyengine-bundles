@@ -44,6 +44,7 @@ class PackagePin(BundleModel):
     version: str | None = None
     specifier: str | None = None
     resolution_status: Literal["pinned", "specifier_only", "unresolved"] | None = None
+    role: Literal["runtime_dependency", "bundle_carrier"] | None = None
     wheel_url: str | None = None
     sdist_url: str | None = None
     sha256: str | None = None
@@ -55,6 +56,10 @@ class PackagePin(BundleModel):
         if self.version is None and self.specifier is None:
             raise ValueError("Package pins require either version or specifier.")
         return self
+
+    @property
+    def is_bundle_carrier(self) -> bool:
+        return self.role == "bundle_carrier"
 
 
 class RuntimeComponentMetadata(BundleModel):
@@ -207,6 +212,14 @@ class DataReleaseManifest(BundleModel):
 class RegionDataset(BundleModel):
     path_template: str
     uri_template: str | None = None
+
+
+class ResolverPolicy(BundleModel):
+    name: Literal["uv"]
+    version: str | None = None
+    resolution: Literal["highest", "lowest", "lowest-direct"] | None = None
+    exclude_newer: str | None = None
+    universal: bool = True
 
 
 class InstallTarget(BundleModel):

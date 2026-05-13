@@ -253,6 +253,30 @@ their relative paths back into `bundle.json` as profile `install_targets`.
 The supported Python versions come exclusively from
 `bundle.json` `metadata.python_versions`; there is no per-run Python-version
 override.
+Candidates may also declare a resolver policy:
+
+```json
+{
+  "resolver": {
+    "name": "uv",
+    "version": "0.11.14",
+    "resolution": "highest",
+    "exclude_newer": "2026-05-09T10:39:06Z",
+    "universal": true
+  }
+}
+```
+
+`generate_bundle.py` copies that policy into `bundle.json` metadata, and
+`solve_lockfiles.py` passes it to `uv pip compile`. CI pins the same `uv`
+version recorded in the resolver policy because `pylock.toml` output can change
+across resolver versions. For published bundles, `exclude_newer` should be set
+to a timestamp after all intended direct package releases exist and before
+later unrelated transitive releases can change the solved graph. Published
+bundles should keep `universal` enabled so `pylock.toml` captures a
+platform-independent resolution instead of the runner host's wheel subset. This
+keeps regeneration deterministic without storing a lockfile for every possible
+platform.
 Runtime validation requires every profile to contain exactly one install target
 for each declared Python version, with no missing or undeclared targets.
 Here, "lockfile" means an installation-resolution artifact, not a concurrency
@@ -295,6 +319,10 @@ constraints, verifies direct package versions, imports the profile packages, and
 runs country household smoke checks where supported for every profile and every
 declared install target. The resulting
 `validation-report.json` is part of the bundle contract.
+US analytics-only database artifacts are currently recorded as `unverified`
+rather than certified, so they are discoverable in the country bundle but are
+not included in SHA-based bundle certification until their publication contract
+is stable.
 Runtime validation records the current runner platform in check details, but
 platform-specific lockfiles are intentionally out of scope for this contract.
 For embedded release manifests, validation hashes the embedded file from the
@@ -314,6 +342,30 @@ python scripts/validate_bundle.py \
 Partial reports mark the skipped checks and set
 `metadata.validation_scope` to `partial`. They are useful for schema fixtures,
 but they are not evidence that a bundle is reproducible.
+
+4. Package release artifacts:
+
+```bash
+python scripts/package_bundle_release.py bundles/4.4.0 --output-dir dist
+```
+
+This verifies the bundle has a passing full-validation report, computes the
+stable `bundle_digest`, writes a missing digest into `bundle.json`, and creates a
+reproducible `policyengine-bundle-4.4.0.tar.gz` archive plus a SHA256 checksum.
+If `bundle.json` already records a digest, packaging fails unless that digest
+matches the current bundle contents. The digest is computed from the same
+bundle-relative files that go into the release archive. It intentionally ignores
+run-local timestamps, temporary command paths, resolver comments, and the digest
+field itself.
+
+The manual `Release bundle` GitHub Actions workflow publishes those files as
+GitHub release assets under tag `v<version>`. It regenerates the bundle from
+`candidates/<version>-all.json`, solves lockfiles, runs full validation with the
+repository Hugging Face token, and packages that freshly certified output. These
+release assets are the stable distribution surface for consumers such as
+`policyengine.py`; they do not replace `bundle.json` as the official manifest.
+Existing release assets are not overwritten; the publisher refuses to create a
+release if `v<version>` already exists.
 
 CI regenerates the current certified bundle from the committed candidate spec
 and compares it with the checked-in bundle using normalized output. The
@@ -360,4 +412,7 @@ A bundle release should not be published unless:
 - certified data artifacts include SHA256 hashes;
 - country data release manifests are reachable;
 - profile install targets solve for supported Python versions;
-- integrated validation passes for each profile.
+- integrated validation passes for each profile;
+- the validation report has `metadata.validation_scope` set to `full`;
+- no validation checks are skipped;
+- the published release archive digest matches the checked bundle manifest.
