@@ -295,6 +295,7 @@ def _build_country_bundle(
     release_manifest_path: str | None,
 ) -> CountryBundle:
     release = DataReleaseManifest.model_validate(loaded_manifest.payload)
+    release = _rewrite_artifacts_to_loaded_revision(release, loaded_manifest)
     model_package = packages[country.model_package]
     core_package = packages["policyengine-core"]
     build = _require_build_metadata(release)
@@ -486,12 +487,86 @@ def _artifact_release(
         repo_type=metadata_release.get("repo_type")
         or loaded_manifest.repo_type
         or "model",
-        version=metadata_release.get("version")
-        or loaded_manifest.revision
+        version=loaded_manifest.revision
+        or metadata_release.get("version")
         or release.data_package.version,
         release_manifest_uri=release_manifest_uri,
         release_manifest_sha256=loaded_manifest.sha256,
     )
+
+
+def _rewrite_artifacts_to_loaded_revision(
+    release: DataReleaseManifest,
+    loaded_manifest: LoadedManifest,
+) -> DataReleaseManifest:
+    if not loaded_manifest.repo_id or not loaded_manifest.revision:
+        return release
+
+    metadata_release = release.metadata.get("artifact_release", {})
+    replaceable_revisions = {
+        value
+        for value in (
+            release.data_package.version,
+            metadata_release.get("version"),
+            loaded_manifest.revision,
+        )
+        if value
+    }
+    artifacts = {
+        key: _rewrite_artifact_to_revision(
+            artifact,
+            repo_id=loaded_manifest.repo_id,
+            revision=loaded_manifest.revision,
+            replaceable_revisions=replaceable_revisions,
+        )
+        for key, artifact in release.artifacts.items()
+    }
+    if artifacts == release.artifacts:
+        return release
+    return release.model_copy(update={"artifacts": artifacts})
+
+
+def _rewrite_artifact_to_revision(
+    artifact: DataArtifact,
+    *,
+    repo_id: str,
+    revision: str,
+    replaceable_revisions: set[str],
+) -> DataArtifact:
+    parsed_uri = _parse_artifact_uri(artifact.uri)
+    artifact_repo_id = artifact.repo_id or (parsed_uri.repo_id if parsed_uri else None)
+    artifact_revision = artifact.revision or (
+        parsed_uri.revision if parsed_uri else None
+    )
+    if artifact_repo_id != repo_id or artifact_revision not in replaceable_revisions:
+        return artifact
+
+    updates: dict[str, str] = {}
+    if artifact.revision is not None:
+        updates["revision"] = revision
+    if (
+        parsed_uri is not None
+        and parsed_uri.repo_id == repo_id
+        and parsed_uri.revision in replaceable_revisions
+    ):
+        updates["uri"] = HuggingFaceReference(
+            repo_type=parsed_uri.repo_type,
+            repo_id=parsed_uri.repo_id,
+            revision=revision,
+            path=parsed_uri.path,
+        ).to_uri()
+    if not updates:
+        return artifact
+    return artifact.model_copy(update=updates)
+
+
+def _parse_artifact_uri(uri: str | None) -> HuggingFaceReference | None:
+    if uri is None:
+        return None
+    try:
+        return HuggingFaceReference.parse(uri)
+    except ValueError:
+        return None
 
 
 def _first_artifact_repo_id(artifacts: Mapping[str, DataArtifact]) -> str | None:
