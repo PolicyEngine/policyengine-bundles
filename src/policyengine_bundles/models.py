@@ -118,6 +118,27 @@ class CertificationEvidence(BundleModel):
     signature: str | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
+    @model_validator(mode="after")
+    def validate_signature_evidence(self) -> CertificationEvidence:
+        if self.kind != "signature":
+            return self
+        missing = [
+            field_name
+            for field_name, value in (
+                ("subject_sha256", self.subject_sha256),
+                ("signer", self.signer),
+                ("signature", self.signature),
+            )
+            if value is None
+        ]
+        if missing:
+            raise ValueError(
+                "Signature evidence requires "
+                + ", ".join(missing)
+                + "."
+            )
+        return self
+
 
 class ArtifactCertification(BundleModel):
     certified_by: str

@@ -7,6 +7,20 @@
       },
       "name": "archive_only_conversion",
       "status": "skipped"
+    },
+    {
+      "details": {
+        "profile": "us-longterm-crfb",
+        "reason": "The long-running profile is declared for staged validation. Its datasets remain hash_pinned until representative H5, metadata, and runtime checks pass in a data-present environment.",
+        "representative_years": [
+          2026,
+          2050,
+          2100
+        ]
+      },
+      "name": "longterm_partial_certification",
+      "profile": "us-longterm-crfb",
+      "status": "skipped"
     }
   ],
   "generated_at": "2026-05-22T20:25:23Z",

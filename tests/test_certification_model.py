@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from policyengine_bundles.models import DataArtifact, PackagePin
+from policyengine_bundles.models import CertificationEvidence, DataArtifact, PackagePin
 
 
 def test_hash_pinned_artifact_requires_sha256() -> None:
@@ -119,3 +119,28 @@ def test_package_pin_can_mark_bundle_carrier() -> None:
     )
 
     assert package.is_bundle_carrier
+
+
+def test_signature_evidence_requires_signed_subject() -> None:
+    with pytest.raises(ValueError, match="Signature evidence requires"):
+        CertificationEvidence.model_validate(
+            {
+                "kind": "signature",
+                "subject": "long_term_cps_2050",
+                "signature": "test-signature",
+            }
+        )
+
+
+def test_signature_evidence_records_signer_and_subject_hash() -> None:
+    evidence = CertificationEvidence.model_validate(
+        {
+            "kind": "signature",
+            "subject": "long_term_cps_2050",
+            "subject_sha256": "a" * 64,
+            "signer": "policyengine-release",
+            "signature": "test-signature",
+        }
+    )
+
+    assert evidence.signer == "policyengine-release"

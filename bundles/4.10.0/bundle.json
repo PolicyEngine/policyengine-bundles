@@ -89,6 +89,17 @@
         "policyengine-core",
         "policyengine-us"
       ]
+    },
+    "us-longterm-crfb": {
+      "countries": [
+        "us"
+      ],
+      "description": "US long-running Social Security / CRFB dataset profile archived from policyengine.py 4.10.0. Datasets remain hash_pinned until representative artifact checks run.",
+      "packages": [
+        "policyengine",
+        "policyengine-core",
+        "policyengine-us"
+      ]
     }
   },
   "schema_version": 1,
