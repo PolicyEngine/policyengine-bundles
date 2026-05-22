@@ -44,6 +44,7 @@ class PackagePin(BundleModel):
     version: str | None = None
     specifier: str | None = None
     resolution_status: Literal["pinned", "specifier_only", "unresolved"] | None = None
+    role: Literal["runtime_dependency", "bundle_carrier"] | None = None
     wheel_url: str | None = None
     sdist_url: str | None = None
     sha256: str | None = None
@@ -55,6 +56,10 @@ class PackagePin(BundleModel):
         if self.version is None and self.specifier is None:
             raise ValueError("Package pins require either version or specifier.")
         return self
+
+    @property
+    def is_bundle_carrier(self) -> bool:
+        return self.role == "bundle_carrier"
 
 
 class RuntimeComponentMetadata(BundleModel):
@@ -77,6 +82,7 @@ class DataPackageReference(BundleModel):
     repo_id: str
     repo_type: str = "model"
     release_manifest_path: str = "release_manifest.json"
+    release_manifest_revision: str | None = None
 
     @model_validator(mode="after")
     def validate_release_manifest_path(self) -> DataPackageReference:
@@ -101,6 +107,24 @@ class PreservationMirror(BundleModel):
     doi: str | None = None
     sha256: str | None = None
     deposited_at: str | None = None
+
+
+class CertificationEvidence(BundleModel):
+    kind: str
+    subject: str | None = None
+    subject_sha256: str | None = None
+    uri: str | None = None
+    signer: str | None = None
+    signature: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ArtifactCertification(BundleModel):
+    certified_by: str
+    certified_at: str | None = None
+    scopes: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    evidence: list[CertificationEvidence] = Field(default_factory=list)
 
 
 class DataArtifact(BundleModel):
@@ -136,6 +160,20 @@ class DataArtifact(BundleModel):
                     "if": {
                         "properties": {
                             "status": {
+                                "enum": ["partially_certified", "hash_pinned"],
+                            }
+                        },
+                        "required": ["status"],
+                    },
+                    "then": {
+                        "required": ["sha256"],
+                        "properties": {"sha256": {"type": "string"}},
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "status": {
                                 "enum": ["unverified", "unavailable"],
                             }
                         },
@@ -144,6 +182,20 @@ class DataArtifact(BundleModel):
                     "then": {
                         "required": ["missing_reason"],
                         "properties": {"missing_reason": {"type": "string"}},
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"status": {"const": "partially_certified"}},
+                        "required": ["status"],
+                    },
+                    "then": {
+                        "required": ["certification"],
+                        "properties": {
+                            "certification": {
+                                "required": ["scopes", "limitations"],
+                            }
+                        },
                     },
                 },
             ],
@@ -155,12 +207,20 @@ class DataArtifact(BundleModel):
     path: str | None = None
     repo_id: str | None = None
     revision: str | None = None
-    status: Literal["certified", "unverified", "unavailable"] = "certified"
+    status: Literal[
+        "certified",
+        "partially_certified",
+        "hash_pinned",
+        "unverified",
+        "unavailable",
+    ] = "certified"
     sha256: str | None = None
+    metadata_sha256: str | None = None
     missing_reason: str | None = None
     size_bytes: int | None = None
     release_manifest_artifact_key: str | None = None
     preservation_mirrors: list[PreservationMirror] = Field(default_factory=list)
+    certification: ArtifactCertification | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -169,8 +229,19 @@ class DataArtifact(BundleModel):
             raise ValueError("Data artifacts require uri or path/repo_id/revision.")
         if self.status == "certified" and self.sha256 is None:
             raise ValueError("Certified data artifacts require sha256.")
-        if self.status != "certified" and self.missing_reason is None:
+        if self.status in {"partially_certified", "hash_pinned"} and self.sha256 is None:
+            raise ValueError(
+                "Partially certified and hash-pinned data artifacts require sha256."
+            )
+        if self.status in {"unverified", "unavailable"} and self.missing_reason is None:
             raise ValueError("Unverified/unavailable artifacts require missing_reason.")
+        if self.status == "partially_certified":
+            if self.certification is None:
+                raise ValueError("Partially certified artifacts require certification.")
+            if not self.certification.scopes:
+                raise ValueError("Partially certified artifacts require scopes.")
+            if not self.certification.limitations:
+                raise ValueError("Partially certified artifacts require limitations.")
         return self
 
 
@@ -274,6 +345,7 @@ class ValidationCheck(BundleModel):
     status: Literal["passed", "failed", "skipped"]
     profile: str | None = None
     country: str | None = None
+    artifact: str | None = None
     python_version: str | None = None
     command: str | None = None
     started_at: str | None = None

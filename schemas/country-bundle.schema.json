@@ -1,5 +1,52 @@
 {
   "$defs": {
+    "ArtifactCertification": {
+      "additionalProperties": false,
+      "properties": {
+        "certified_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Certified At"
+        },
+        "certified_by": {
+          "title": "Certified By",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/CertificationEvidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "scopes": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Scopes",
+          "type": "array"
+        }
+      },
+      "required": [
+        "certified_by"
+      ],
+      "title": "ArtifactCertification",
+      "type": "object"
+    },
     "ArtifactRelease": {
       "additionalProperties": false,
       "properties": {
@@ -46,6 +93,85 @@
         "version"
       ],
       "title": "ArtifactRelease",
+      "type": "object"
+    },
+    "CertificationEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "signature": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Signature"
+        },
+        "signer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Signer"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject"
+        },
+        "subject_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Sha256"
+        },
+        "uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uri"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "CertificationEvidence",
       "type": "object"
     },
     "CountryCertification": {
@@ -142,6 +268,31 @@
             "properties": {
               "status": {
                 "enum": [
+                  "partially_certified",
+                  "hash_pinned"
+                ]
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "sha256": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "sha256"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
                   "unverified",
                   "unavailable"
                 ]
@@ -159,6 +310,31 @@
             },
             "required": [
               "missing_reason"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "partially_certified"
+              }
+            },
+            "required": [
+              "status"
+            ]
+          },
+          "then": {
+            "properties": {
+              "certification": {
+                "required": [
+                  "scopes",
+                  "limitations"
+                ]
+              }
+            },
+            "required": [
+              "certification"
             ]
           }
         }
@@ -194,6 +370,17 @@
         }
       ],
       "properties": {
+        "certification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ArtifactCertification"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "kind": {
           "title": "Kind",
           "type": "string"
@@ -202,6 +389,18 @@
           "additionalProperties": true,
           "title": "Metadata",
           "type": "object"
+        },
+        "metadata_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Metadata Sha256"
         },
         "missing_reason": {
           "anyOf": [
@@ -298,6 +497,8 @@
           "default": "certified",
           "enum": [
             "certified",
+            "partially_certified",
+            "hash_pinned",
             "unverified",
             "unavailable"
           ],
@@ -334,6 +535,18 @@
           "default": "release_manifest.json",
           "title": "Release Manifest Path",
           "type": "string"
+        },
+        "release_manifest_revision": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Release Manifest Revision"
         },
         "repo_id": {
           "title": "Repo Id",
@@ -414,6 +627,22 @@
           ],
           "default": null,
           "title": "Resolution Status"
+        },
+        "role": {
+          "anyOf": [
+            {
+              "enum": [
+                "runtime_dependency",
+                "bundle_carrier"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Role"
         },
         "sdist_url": {
           "anyOf": [

@@ -1,0 +1,96 @@
+{
+  "bundle_version": "4.10.0",
+  "countries": {
+    "uk": "countries/uk.json",
+    "us": "countries/us.json"
+  },
+  "created_at": "2026-05-22T20:25:23Z",
+  "metadata": {
+    "archive_only": true,
+    "generated_by": "policyengine.py release manifest archive conversion",
+    "policyengine_py_ref": "origin/main",
+    "python_versions": [
+      "3.9",
+      "3.10",
+      "3.11",
+      "3.12",
+      "3.13",
+      "3.14"
+    ]
+  },
+  "packages": {
+    "policyengine": {
+      "name": "policyengine",
+      "resolution_status": "pinned",
+      "version": "4.10.0"
+    },
+    "policyengine-core": {
+      "name": "policyengine-core",
+      "resolution_status": "pinned",
+      "sha256": "185374b3c1fe13dc951637c49a9853211ca61a8a9971eb9cc4c4b07b1477240a",
+      "source": "pypi",
+      "version": "3.26.1",
+      "wheel_url": "https://files.pythonhosted.org/packages/15/2f/9be635fe4dfb2fe65d200c33695f5a96ef98a2921f06ff6d465384b0e551/policyengine_core-3.26.1-py3-none-any.whl"
+    },
+    "policyengine-uk": {
+      "name": "policyengine-uk",
+      "resolution_status": "pinned",
+      "sha256": "8c3dacb868f3fb18296b8ef2475edaf543f57b8056d24a58bca59b108651f272",
+      "source": "pypi",
+      "version": "2.88.20",
+      "wheel_url": "https://files.pythonhosted.org/packages/32/f0/c0e7dbcc049501dc968da0a67de4976f305228328f96fe0ad08c65301c4f/policyengine_uk-2.88.20-py3-none-any.whl"
+    },
+    "policyengine-us": {
+      "name": "policyengine-us",
+      "resolution_status": "pinned",
+      "sha256": "7633d8aefcaf02d7628f841bc56750606f1d7fe409ff3ae7b0ef7e364a88e945",
+      "source": "pypi",
+      "version": "1.700.0",
+      "wheel_url": "https://files.pythonhosted.org/packages/49/e9/2837a0d98e99efaf4d82aade276eee6eeff419df614863f08e3512961d2d/policyengine_us-1.700.0-py3-none-any.whl"
+    }
+  },
+  "policyengine": {
+    "name": "policyengine",
+    "resolution_status": "pinned",
+    "version": "4.10.0"
+  },
+  "profiles": {
+    "all": {
+      "countries": [
+        "uk",
+        "us"
+      ],
+      "description": "All-country profile archived from policyengine.py 4.10.0.",
+      "packages": [
+        "policyengine",
+        "policyengine-core",
+        "policyengine-uk",
+        "policyengine-us"
+      ]
+    },
+    "uk": {
+      "countries": [
+        "uk"
+      ],
+      "description": "UK runtime profile archived from policyengine.py 4.10.0.",
+      "packages": [
+        "policyengine",
+        "policyengine-core",
+        "policyengine-uk"
+      ]
+    },
+    "us": {
+      "countries": [
+        "us"
+      ],
+      "description": "US runtime profile archived from policyengine.py 4.10.0.",
+      "packages": [
+        "policyengine",
+        "policyengine-core",
+        "policyengine-us"
+      ]
+    }
+  },
+  "schema_version": 1,
+  "validation_report": "validation-report.json"
+}
