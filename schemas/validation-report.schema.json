@@ -3,6 +3,18 @@
     "ValidationCheck": {
       "additionalProperties": false,
       "properties": {
+        "artifact": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Artifact"
+        },
         "command": {
           "anyOf": [
             {
