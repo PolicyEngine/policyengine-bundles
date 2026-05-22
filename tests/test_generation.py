@@ -26,6 +26,9 @@ def test_generate_bundle_from_candidate(tmp_path: Path) -> None:
 
     bundle = load_bundle_directory(output_dir)
     assert bundle.manifest.bundle_version == "4.4.0"
+    assert bundle.manifest.policyengine.role == "bundle_carrier"
+    assert bundle.manifest.policyengine.sha256 is None
+    assert bundle.manifest.packages["policyengine"] == bundle.manifest.policyengine
     assert bundle.manifest.profiles["us"].packages == [
         "policyengine",
         "policyengine-core",

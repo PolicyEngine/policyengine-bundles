@@ -418,6 +418,11 @@ def _validate_profile_runtime(
     runner: CommandRunner,
 ) -> list[ValidationCheck]:
     profile = bundle.manifest.profiles[profile_name]
+    runtime_package_names = [
+        name
+        for name in profile.packages
+        if not bundle.manifest.packages[name].is_bundle_carrier
+    ]
     checks: list[ValidationCheck] = []
     checks.append(
         _validate_lockfile(
@@ -490,7 +495,7 @@ def _validate_profile_runtime(
                 [
                     str(python),
                     "-c",
-                    _package_version_check_code(bundle, profile.packages),
+                    _package_version_check_code(bundle, runtime_package_names),
                 ],
             ),
             (
@@ -498,7 +503,7 @@ def _validate_profile_runtime(
                 [
                     str(python),
                     "-c",
-                    _import_smoke_code(profile.packages),
+                    _import_smoke_code(runtime_package_names),
                 ],
             ),
         ]

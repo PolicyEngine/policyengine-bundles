@@ -268,11 +268,21 @@ def _resolve_package_pins(
     candidate: BundleCandidate,
     package_resolver: PackageResolver,
 ) -> dict[str, PackagePin]:
-    versions = {"policyengine": candidate.policyengine_version, **candidate.packages}
-    return {
-        name: _require_exact_pin(package_resolver(name, version))
-        for name, version in versions.items()
+    pins = {
+        "policyengine": PackagePin(
+            name="policyengine",
+            version=candidate.policyengine_version,
+            resolution_status="pinned",
+            role="bundle_carrier",
+        )
     }
+    pins.update(
+        {
+            name: _require_exact_pin(package_resolver(name, version))
+            for name, version in candidate.packages.items()
+        }
+    )
+    return pins
 
 
 def _require_exact_pin(pin: PackagePin) -> PackagePin:
