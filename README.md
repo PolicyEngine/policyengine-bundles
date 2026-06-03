@@ -320,7 +320,9 @@ Validation checks that certified data artifacts are reachable and match their
 declared hashes, creates clean profile environments from the generated
 constraints, verifies direct package versions, imports the profile packages, and
 runs country household smoke checks where supported for every profile and every
-declared install target. The resulting
+declared install target. If `policyengine` is a pre-release bundle carrier and
+is excluded from the runtime install, the smoke checks use the installed country
+packages directly. The resulting
 `validation-report.json` is part of the bundle contract.
 Runtime validation records the current runner platform in check details, but
 platform-specific lockfiles are intentionally out of scope for this contract.

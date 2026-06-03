@@ -7,6 +7,7 @@ from conftest import fake_resolver, release_manifest, write_candidate, write_jso
 
 from policyengine_bundles.bundle_validation import (
     ArtifactVerification,
+    _household_smoke_code,
     _package_version_check_code,
     validate_bundle,
     verify_artifact_uri,
@@ -118,6 +119,21 @@ def test_package_version_check_code_executes(tmp_path: Path, monkeypatch) -> Non
         bundle.manifest.profiles["us"].packages,
     )
     exec(code, {})
+
+
+def test_household_smoke_uses_country_package_when_carrier_is_excluded() -> None:
+    code = _household_smoke_code("us", use_bundle_carrier=False)
+
+    assert "from policyengine_us import Simulation" in code
+    assert "import policyengine as pe" not in code
+    compile(code, "<household-smoke>", "exec")
+
+
+def test_household_smoke_can_use_bundle_carrier_when_installed() -> None:
+    code = _household_smoke_code("uk", use_bundle_carrier=True)
+
+    assert "import policyengine as pe" in code
+    compile(code, "<household-smoke>", "exec")
 
 
 def test_validate_bundle_reports_runtime_failure(tmp_path: Path) -> None:
