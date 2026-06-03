@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 import urllib.parse
 import urllib.request
@@ -8,15 +9,15 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
-
-from pydantic import Field, model_validator
+from typing import Any
 
 from policyengine_bundles.io import JsonDict, load_json, write_bytes, write_json
 from policyengine_bundles.models import (
     ArtifactRelease,
+    BundleCandidate,
     BundleManifest,
-    BundleModel,
+    CandidateCountry,
+    CertificationEvidence,
     CountryBundle,
     CountryCertification,
     DataArtifact,
@@ -29,57 +30,19 @@ from policyengine_bundles.models import (
     ValidationCheck,
     ValidationReport,
 )
-from policyengine_bundles.python_versions import python_version_key_map
 from policyengine_bundles.references import HuggingFaceReference, hugging_face_token
 from policyengine_bundles.validation import load_bundle_directory
 
 PackageResolver = Callable[[str, str], PackagePin]
 ManifestLoader = Callable[[str], "LoadedManifest"]
+ComponentMetadataResolver = Callable[[PackagePin], RuntimeComponentMetadata | None]
 
 
-class CandidateCountry(BundleModel):
-    model_package: str
-    data_release_manifest_uri: str
-
-
-class BundleCandidate(BundleModel):
-    schema_version: Literal[1]
-    bundle_version: str
-    policyengine_version: str
-    python_versions: list[str] = Field(min_length=1)
-    profiles: list[str]
-    packages: dict[str, str]
-    countries: dict[str, CandidateCountry]
-
-    @model_validator(mode="after")
-    def validate_candidate(self) -> BundleCandidate:
-        if self.policyengine_version != self.bundle_version:
-            raise ValueError(
-                "Candidate policyengine_version must match bundle_version. "
-                "The bundle version is the human-facing policyengine version."
-            )
-        if "policyengine-core" not in self.packages:
-            raise ValueError("Candidate packages must include policyengine-core.")
-        if not self.countries:
-            raise ValueError("Candidate must include at least one country.")
-        if not self.profiles:
-            raise ValueError("Candidate must include at least one profile.")
-        python_version_key_map(
-            self.python_versions,
-            field_name="candidate python_versions",
-        )
-        for country_id, country in self.countries.items():
-            if country.model_package not in self.packages:
-                raise ValueError(
-                    f"Country {country_id!r} references unknown model package "
-                    f"{country.model_package!r}."
-                )
-        for profile in self.profiles:
-            if profile != "all" and profile not in self.countries:
-                raise ValueError(
-                    f"Profile {profile!r} must be 'all' or a candidate country id."
-                )
-        return self
+PACKAGE_IMPORT_NAMES = {
+    "policyengine-core": "policyengine_core",
+    "policyengine-us": "policyengine_us",
+    "policyengine-uk": "policyengine_uk",
+}
 
 
 @dataclass(frozen=True)
@@ -93,6 +56,16 @@ class LoadedManifest:
     repo_type: str | None = None
     revision: str | None = None
     path: str | None = None
+
+
+@dataclass(frozen=True)
+class _RuntimeCertification:
+    basis: str
+    certified_by: str
+    runtime_model_package: RuntimeComponentMetadata | None = None
+    runtime_core_package: RuntimeComponentMetadata | PackagePin | None = None
+    evidence: list[CertificationEvidence] | None = None
+    metadata: dict[str, Any] | None = None
 
 
 def _sha256_bytes(content: bytes) -> str:
@@ -128,6 +101,27 @@ def resolve_pypi_package(name: str, version: str) -> PackagePin:
         sha256=wheel.get("digests", {}).get("sha256"),
         source="pypi",
     )
+
+
+def resolve_component_metadata(
+    package: PackagePin,
+) -> RuntimeComponentMetadata | None:
+    """Load dependency-light runtime metadata from an installed component package."""
+    if package.version is None:
+        return None
+    import_name = PACKAGE_IMPORT_NAMES.get(package.name, package.name.replace("-", "_"))
+    for module_name in (f"{import_name}.build_metadata", import_name):
+        try:
+            module = importlib.import_module(module_name)
+        except ImportError:
+            continue
+        get_runtime_metadata = getattr(module, "get_runtime_metadata", None)
+        if get_runtime_metadata is None:
+            continue
+        metadata = RuntimeComponentMetadata.model_validate(get_runtime_metadata())
+        if metadata.name == package.name and metadata.version == package.version:
+            return metadata
+    return None
 
 
 def load_release_manifest_uri(uri: str) -> LoadedManifest:
@@ -173,6 +167,7 @@ def generate_bundle(
     *,
     package_resolver: PackageResolver = resolve_pypi_package,
     manifest_loader: ManifestLoader = load_release_manifest_uri,
+    component_metadata_resolver: ComponentMetadataResolver = resolve_component_metadata,
     force: bool = False,
     testing_only: bool = False,
     embed_local_manifests: bool = False,
@@ -209,6 +204,7 @@ def generate_bundle(
                 if local_manifest_path is not None
                 else None
             ),
+            component_metadata_resolver=component_metadata_resolver,
         )
     _validate_core_agreement(package_pins, countries)
 
@@ -303,6 +299,7 @@ def _build_country_bundle(
     packages: Mapping[str, PackagePin],
     loaded_manifest: LoadedManifest,
     release_manifest_path: str | None,
+    component_metadata_resolver: ComponentMetadataResolver,
 ) -> CountryBundle:
     release = DataReleaseManifest.model_validate(loaded_manifest.payload)
     release = _rewrite_artifacts_to_loaded_revision(release, loaded_manifest)
@@ -319,19 +316,14 @@ def _build_country_bundle(
         package=build.built_with_core_package,
         field_name="built_with_core_package",
     )
-    _validate_release_supports_package(
+    runtime_certification = _certify_runtime_compatibility(
         release=release,
-        package_name=model_package.name,
-        version=model_package.version or "",
-        compatible_packages=release.compatible_model_packages,
-        build_metadata=built_with_model_package,
-    )
-    _validate_release_supports_package(
-        release=release,
-        package_name=core_package.name,
-        version=core_package.version or "",
-        compatible_packages=release.compatible_core_packages,
-        build_metadata=built_with_core_package,
+        country=country,
+        model_package=model_package,
+        core_package=core_package,
+        built_with_model_package=built_with_model_package,
+        built_with_core_package=built_with_core_package,
+        component_metadata_resolver=component_metadata_resolver,
     )
 
     default_dataset = _default_dataset(release)
@@ -363,7 +355,7 @@ def _build_country_bundle(
         default_dataset=default_dataset,
         datasets=release.artifacts,
         certification=CountryCertification(
-            compatibility_basis="release_manifest_exact_compatibility",
+            compatibility_basis=runtime_certification.basis,
             built_with_model_package=_metadata_to_package_pin(
                 built_with_model_package,
             ),
@@ -372,13 +364,17 @@ def _build_country_bundle(
             ),
             certified_for_model_package=model_package,
             certified_for_core_package=core_package,
-            certified_by="policyengine-bundles generator",
+            certified_by=runtime_certification.certified_by,
             data_build_id=build.build_id,
             data_build_fingerprint=(
                 built_with_model_package.data_build_fingerprint
                 if hasattr(built_with_model_package, "data_build_fingerprint")
                 else None
             ),
+            runtime_model_package=runtime_certification.runtime_model_package,
+            runtime_core_package=runtime_certification.runtime_core_package,
+            evidence=runtime_certification.evidence or [],
+            metadata=runtime_certification.metadata or {},
         ),
         metadata={
             "input_release_manifest_uri": loaded_manifest.uri,
@@ -415,6 +411,76 @@ def _require_exact_build_package(
     return package
 
 
+def _certify_runtime_compatibility(
+    *,
+    release: DataReleaseManifest,
+    country: CandidateCountry,
+    model_package: PackagePin,
+    core_package: PackagePin,
+    built_with_model_package: RuntimeComponentMetadata | PackagePin,
+    built_with_core_package: RuntimeComponentMetadata | PackagePin,
+    component_metadata_resolver: ComponentMetadataResolver,
+) -> _RuntimeCertification:
+    if _package_metadata_matches_pin(
+        built_with_model_package,
+        model_package,
+    ) and _package_metadata_matches_pin(built_with_core_package, core_package):
+        return _RuntimeCertification(
+            basis="data_release_build_package_match",
+            certified_by="policyengine-bundles generator",
+        )
+
+    runtime_model_package = component_metadata_resolver(model_package)
+    runtime_core_package = component_metadata_resolver(core_package)
+    if (
+        _package_metadata_matches_pin(built_with_core_package, core_package)
+        and built_with_model_package.name == model_package.name
+        and runtime_model_package is not None
+        and _package_metadata_matches_pin(runtime_model_package, model_package)
+        and (
+            runtime_core_package is None
+            or _package_metadata_matches_pin(runtime_core_package, core_package)
+        )
+        and runtime_model_package.data_build_fingerprint is not None
+        and hasattr(built_with_model_package, "data_build_fingerprint")
+        and runtime_model_package.data_build_fingerprint
+        == built_with_model_package.data_build_fingerprint
+    ):
+        return _RuntimeCertification(
+            basis="matching_data_build_fingerprint",
+            certified_by="policyengine-bundles generator",
+            runtime_model_package=runtime_model_package,
+            runtime_core_package=runtime_core_package,
+        )
+
+    if country.certification is not None:
+        return _RuntimeCertification(
+            basis=country.certification.basis,
+            certified_by=country.certification.certified_by,
+            runtime_model_package=runtime_model_package,
+            runtime_core_package=runtime_core_package,
+            evidence=country.certification.evidence,
+            metadata={
+                **country.certification.metadata,
+                "reason": country.certification.reason,
+            },
+        )
+
+    raise ValueError(
+        f"{release.data_package.name}=={release.data_package.version} is not "
+        f"certified for {model_package.name}=={model_package.version} and "
+        f"{core_package.name}=={core_package.version}. Add matching runtime "
+        "metadata or an explicit candidate certification."
+    )
+
+
+def _package_metadata_matches_pin(
+    metadata: RuntimeComponentMetadata | PackagePin,
+    package: PackagePin,
+) -> bool:
+    return metadata.name == package.name and metadata.version == package.version
+
+
 def _local_release_manifest_output_path(
     *,
     country_id: str,
@@ -439,29 +505,6 @@ def _release_manifest_path(loaded_manifest: LoadedManifest) -> str:
     if loaded_manifest.repo_id and loaded_manifest.path:
         return loaded_manifest.path
     return "release_manifest.json"
-
-
-def _validate_release_supports_package(
-    *,
-    release: DataReleaseManifest,
-    package_name: str,
-    version: str,
-    compatible_packages: list[Any],
-    build_metadata: Any,
-) -> None:
-    if build_metadata is not None and build_metadata.name == package_name:
-        if build_metadata.version == version:
-            return
-    for specifier in compatible_packages:
-        if (
-            specifier.name == package_name
-            and specifier.specifier.strip() == f"=={version}"
-        ):
-            return
-    raise ValueError(
-        f"{release.data_package.name}=={release.data_package.version} does not "
-        f"declare exact compatibility with {package_name}=={version}."
-    )
 
 
 def _default_dataset(release: DataReleaseManifest) -> str:

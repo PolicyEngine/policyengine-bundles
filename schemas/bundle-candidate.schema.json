@@ -1,0 +1,211 @@
+{
+  "$defs": {
+    "CandidateCountry": {
+      "additionalProperties": false,
+      "properties": {
+        "certification": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/CandidateRuntimeCertification"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "data_release_manifest_uri": {
+          "title": "Data Release Manifest Uri",
+          "type": "string"
+        },
+        "model_package": {
+          "title": "Model Package",
+          "type": "string"
+        }
+      },
+      "required": [
+        "model_package",
+        "data_release_manifest_uri"
+      ],
+      "title": "CandidateCountry",
+      "type": "object"
+    },
+    "CandidateRuntimeCertification": {
+      "additionalProperties": false,
+      "properties": {
+        "basis": {
+          "const": "manual_runtime_certification",
+          "default": "manual_runtime_certification",
+          "title": "Basis",
+          "type": "string"
+        },
+        "certified_by": {
+          "minLength": 1,
+          "title": "Certified By",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/CertificationEvidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "certified_by",
+        "reason"
+      ],
+      "title": "CandidateRuntimeCertification",
+      "type": "object"
+    },
+    "CertificationEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "title": "Kind",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "signature": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Signature"
+        },
+        "signer": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Signer"
+        },
+        "subject": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject"
+        },
+        "subject_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Subject Sha256"
+        },
+        "uri": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Uri"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "title": "CertificationEvidence",
+      "type": "object"
+    }
+  },
+  "$id": "https://policyengine.org/schemas/policyengine-bundle-candidate.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Input candidate spec consumed by bundle generation.",
+  "properties": {
+    "bundle_version": {
+      "title": "Bundle Version",
+      "type": "string"
+    },
+    "countries": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CandidateCountry"
+      },
+      "title": "Countries",
+      "type": "object"
+    },
+    "packages": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Packages",
+      "type": "object"
+    },
+    "policyengine_version": {
+      "title": "Policyengine Version",
+      "type": "string"
+    },
+    "profiles": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Profiles",
+      "type": "array"
+    },
+    "python_versions": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Python Versions",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 1,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "schema_version",
+    "bundle_version",
+    "policyengine_version",
+    "python_versions",
+    "profiles",
+    "packages",
+    "countries"
+  ],
+  "title": "PolicyEngine bundle candidate",
+  "type": "object"
+}

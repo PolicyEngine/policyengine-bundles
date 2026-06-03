@@ -5,6 +5,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from policyengine_bundles.python_versions import python_version_key_map
+
 
 class BundleModel(BaseModel):
     """Base model for strict bundle metadata contracts."""
@@ -229,7 +231,10 @@ class DataArtifact(BundleModel):
             raise ValueError("Data artifacts require uri or path/repo_id/revision.")
         if self.status == "certified" and self.sha256 is None:
             raise ValueError("Certified data artifacts require sha256.")
-        if self.status in {"partially_certified", "hash_pinned"} and self.sha256 is None:
+        if (
+            self.status in {"partially_certified", "hash_pinned"}
+            and self.sha256 is None
+        ):
             raise ValueError(
                 "Partially certified and hash-pinned data artifacts require sha256."
             )
@@ -275,6 +280,60 @@ class DataReleaseManifest(BundleModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class CandidateRuntimeCertification(BundleModel):
+    basis: Literal["manual_runtime_certification"] = "manual_runtime_certification"
+    certified_by: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
+    evidence: list[CertificationEvidence] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CandidateCountry(BundleModel):
+    model_package: str
+    data_release_manifest_uri: str
+    certification: CandidateRuntimeCertification | None = None
+
+
+class BundleCandidate(BundleModel):
+    schema_version: Literal[1]
+    bundle_version: str
+    policyengine_version: str
+    python_versions: list[str] = Field(min_length=1)
+    profiles: list[str]
+    packages: dict[str, str]
+    countries: dict[str, CandidateCountry]
+
+    @model_validator(mode="after")
+    def validate_candidate(self) -> BundleCandidate:
+        if self.policyengine_version != self.bundle_version:
+            raise ValueError(
+                "Candidate policyengine_version must match bundle_version. "
+                "The bundle version is the human-facing policyengine version."
+            )
+        if "policyengine-core" not in self.packages:
+            raise ValueError("Candidate packages must include policyengine-core.")
+        if not self.countries:
+            raise ValueError("Candidate must include at least one country.")
+        if not self.profiles:
+            raise ValueError("Candidate must include at least one profile.")
+        python_version_key_map(
+            self.python_versions,
+            field_name="candidate python_versions",
+        )
+        for country_id, country in self.countries.items():
+            if country.model_package not in self.packages:
+                raise ValueError(
+                    f"Country {country_id!r} references unknown model package "
+                    f"{country.model_package!r}."
+                )
+        for profile in self.profiles:
+            if profile != "all" and profile not in self.countries:
+                raise ValueError(
+                    f"Profile {profile!r} must be 'all' or a candidate country id."
+                )
+        return self
+
+
 class RegionDataset(BundleModel):
     path_template: str
     uri_template: str | None = None
@@ -302,6 +361,9 @@ class CountryCertification(BundleModel):
     certified_by: str
     data_build_id: str | None = None
     data_build_fingerprint: str | None = None
+    runtime_model_package: RuntimeComponentMetadata | None = None
+    runtime_core_package: RuntimeComponentMetadata | PackagePin | None = None
+    evidence: list[CertificationEvidence] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

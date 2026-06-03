@@ -221,10 +221,43 @@
           "default": null,
           "title": "Data Build Id"
         },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/CertificationEvidence"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
         "metadata": {
           "additionalProperties": true,
           "title": "Metadata",
           "type": "object"
+        },
+        "runtime_core_package": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeComponentMetadata"
+            },
+            {
+              "$ref": "#/$defs/PackagePin"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Runtime Core Package"
+        },
+        "runtime_model_package": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuntimeComponentMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -802,6 +835,102 @@
         "path_template"
       ],
       "title": "RegionDataset",
+      "type": "object"
+    },
+    "RuntimeComponentMetadata": {
+      "additionalProperties": false,
+      "description": "Dependency-free metadata emitted by component packages.",
+      "properties": {
+        "core": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PackagePin"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "data_build_fingerprint": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Data Build Fingerprint"
+        },
+        "git_sha": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Git Sha"
+        },
+        "metadata": {
+          "additionalProperties": true,
+          "title": "Metadata",
+          "type": "object"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "source_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Path"
+        },
+        "version": {
+          "title": "Version",
+          "type": "string"
+        },
+        "wheel_sha256": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wheel Sha256"
+        },
+        "wheel_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wheel Url"
+        }
+      },
+      "required": [
+        "name",
+        "version"
+      ],
+      "title": "RuntimeComponentMetadata",
       "type": "object"
     }
   },

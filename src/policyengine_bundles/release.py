@@ -118,7 +118,9 @@ def verify_bundle_release_assets(
     checksum_path = dist_dir / checksum_name
     summary_path = dist_dir / summary_name
     missing = [
-        path.name for path in (archive_path, checksum_path, summary_path) if not path.exists()
+        path.name
+        for path in (archive_path, checksum_path, summary_path)
+        if not path.exists()
     ]
     if missing:
         raise ValueError(f"Missing bundle release assets: {', '.join(missing)}.")

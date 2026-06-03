@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from policyengine_bundles.models import (
+    BundleCandidate,
     BundleManifest,
     CountryBundle,
     DataReleaseManifest,
@@ -43,6 +44,7 @@ def validate_component_metadata_contract() -> None:
 
 def validate_model_schema_export() -> None:
     for model in (
+        BundleCandidate,
         BundleManifest,
         CountryBundle,
         DataReleaseManifest,
