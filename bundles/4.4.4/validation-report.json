@@ -3,47 +3,31 @@
   "checks": [
     {
       "country": "uk",
-      "details": {
-        "failures": [
-          "uk release manifest could not be read: 'hf://model/policyengine/policyengine-uk-data-private@1.55.5/release_manifest.json'"
-        ]
-      },
+      "details": {},
       "name": "data_release_manifest_contract",
       "profile": "all",
-      "status": "failed"
+      "status": "passed"
     },
     {
       "country": "us",
-      "details": {
-        "failures": [
-          "us release manifest could not be read: 'hf://model/policyengine/policyengine-us-data@99e0ec7e784cdba43dd21ff1d80a081599a7a537/releases/1.113.1/release_manifest.json'"
-        ]
-      },
+      "details": {},
       "name": "data_release_manifest_contract",
       "profile": "all",
-      "status": "failed"
+      "status": "passed"
     },
     {
       "country": "uk",
-      "details": {
-        "failures": [
-          "uk release manifest could not be read: 'hf://model/policyengine/policyengine-uk-data-private@1.55.5/release_manifest.json'"
-        ]
-      },
+      "details": {},
       "name": "data_release_manifest_contract",
       "profile": "uk",
-      "status": "failed"
+      "status": "passed"
     },
     {
       "country": "us",
-      "details": {
-        "failures": [
-          "us release manifest could not be read: 'hf://model/policyengine/policyengine-us-data@99e0ec7e784cdba43dd21ff1d80a081599a7a537/releases/1.113.1/release_manifest.json'"
-        ]
-      },
+      "details": {},
       "name": "data_release_manifest_contract",
       "profile": "us",
-      "status": "failed"
+      "status": "passed"
     },
     {
       "details": {
@@ -367,5 +351,5 @@
     "verify_data": true
   },
   "schema_version": 1,
-  "status": "failed"
+  "status": "passed"
 }
