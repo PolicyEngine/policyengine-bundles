@@ -65,81 +65,81 @@
       "status": "passed"
     },
     {
-      "command": "uv venv --python 3.13 /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpf1hitda9/venv",
+      "command": "uv venv --python 3.13 /var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpiqmxdw0z/venv",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:06:23Z",
       "name": "create_venv",
       "profile": "all",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:06:23Z",
       "status": "passed"
     },
     {
-      "command": "uv pip install --python /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpf1hitda9/venv/bin/python -r .tmp/bundle-4.4.4/install/all/py313/constraints.txt",
+      "command": "uv pip install --python /var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpiqmxdw0z/venv/bin/python -r bundles/4.4.4/install/all/py313/constraints.txt",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:06:25Z",
       "name": "install_constraints",
       "profile": "all",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:06:23Z",
       "status": "passed"
     },
     {
-      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpf1hitda9/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine-core\": \"3.26.1\", \"policyengine-uk\": \"2.88.14\", \"policyengine-us\": \"1.691.3\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpiqmxdw0z/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine\": \"4.4.4\", \"policyengine-core\": \"3.26.1\", \"policyengine-uk\": \"2.88.14\", \"policyengine-us\": \"1.691.3\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:06:25Z",
       "name": "verify_direct_package_versions",
       "profile": "all",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:06:25Z",
       "status": "passed"
     },
     {
-      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpf1hitda9/venv/bin/python -c import policyengine_core\nimport policyengine_uk\nimport policyengine_us\n",
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpiqmxdw0z/venv/bin/python -c import policyengine\nimport policyengine_core\nimport policyengine_uk\nimport policyengine_us\n",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:06:53Z",
       "name": "import_smoke",
       "profile": "all",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:06:25Z",
       "status": "passed"
     },
     {
-      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpf1hitda9/venv/bin/python -c from policyengine_uk import Simulation\nsimulation = Simulation(situation={'people': {'person': {'age': {'2026': 35}, 'employment_income': {'2026': 0}}}, 'benunits': {'benunit': {'members': ['person']}}, 'households': {'household': {'members': ['person']}}, })\nsimulation.calculate('age', '2026')\n",
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpiqmxdw0z/venv/bin/python -c import policyengine as pe\npe.uk.calculate_household(people=[{'age': 35}], year=2026)\n",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:07:05Z",
       "name": "uk_household_smoke",
       "profile": "all",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:06:53Z",
       "status": "passed"
     },
     {
-      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpf1hitda9/venv/bin/python -c from policyengine_us import Simulation\nsimulation = Simulation(situation={'people': {'person': {'age': {'2026': 35}, 'employment_income': {'2026': 1_000}}}, 'households': {'household': {'members': ['person'], 'state_code': {'2026': 'CA'}}}, 'tax_units': {'tax_unit': {'members': ['person'], 'filing_status': {'2026': 'SINGLE'}}}, 'spm_units': {'spm_unit': {'members': ['person']}}, 'families': {'family': {'members': ['person']}}, 'marital_units': {'marital_unit': {'members': ['person']}}, })\nsimulation.calculate('age', '2026')\n",
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpiqmxdw0z/venv/bin/python -c import policyengine as pe\npe.us.calculate_household(people=[{'age': 35}], tax_unit={'filing_status': 'SINGLE'}, year=2026)\n",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:07:23Z",
       "name": "us_household_smoke",
       "profile": "all",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:07:05Z",
       "status": "passed"
     },
     {
@@ -178,68 +178,68 @@
       "status": "passed"
     },
     {
-      "command": "uv venv --python 3.13 /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpayrek_ok/venv",
+      "command": "uv venv --python 3.13 /var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmprtpz5g5k/venv",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:07:27Z",
       "name": "create_venv",
       "profile": "uk",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:07:27Z",
       "status": "passed"
     },
     {
-      "command": "uv pip install --python /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpayrek_ok/venv/bin/python -r .tmp/bundle-4.4.4/install/uk/py313/constraints.txt",
+      "command": "uv pip install --python /var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmprtpz5g5k/venv/bin/python -r bundles/4.4.4/install/uk/py313/constraints.txt",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:07:28Z",
       "name": "install_constraints",
       "profile": "uk",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:07:27Z",
       "status": "passed"
     },
     {
-      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpayrek_ok/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine-core\": \"3.26.1\", \"policyengine-uk\": \"2.88.14\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmprtpz5g5k/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine\": \"4.4.4\", \"policyengine-core\": \"3.26.1\", \"policyengine-uk\": \"2.88.14\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:07:28Z",
       "name": "verify_direct_package_versions",
       "profile": "uk",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:07:28Z",
       "status": "passed"
     },
     {
-      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpayrek_ok/venv/bin/python -c import policyengine_core\nimport policyengine_uk\n",
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmprtpz5g5k/venv/bin/python -c import policyengine\nimport policyengine_core\nimport policyengine_uk\n",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:07:44Z",
       "name": "import_smoke",
       "profile": "uk",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:07:28Z",
       "status": "passed"
     },
     {
-      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpayrek_ok/venv/bin/python -c from policyengine_uk import Simulation\nsimulation = Simulation(situation={'people': {'person': {'age': {'2026': 35}, 'employment_income': {'2026': 0}}}, 'benunits': {'benunit': {'members': ['person']}}, 'households': {'household': {'members': ['person']}}, })\nsimulation.calculate('age', '2026')\n",
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmprtpz5g5k/venv/bin/python -c import policyengine as pe\npe.uk.calculate_household(people=[{'age': 35}], year=2026)\n",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:07:46Z",
       "name": "uk_household_smoke",
       "profile": "uk",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:07:44Z",
       "status": "passed"
     },
     {
@@ -278,72 +278,72 @@
       "status": "passed"
     },
     {
-      "command": "uv venv --python 3.13 /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpoin3q0t7/venv",
+      "command": "uv venv --python 3.13 /var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpr14xmpzh/venv",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:07:48Z",
       "name": "create_venv",
       "profile": "us",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:07:48Z",
       "status": "passed"
     },
     {
-      "command": "uv pip install --python /var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpoin3q0t7/venv/bin/python -r .tmp/bundle-4.4.4/install/us/py313/constraints.txt",
+      "command": "uv pip install --python /var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpr14xmpzh/venv/bin/python -r bundles/4.4.4/install/us/py313/constraints.txt",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:07:49Z",
       "name": "install_constraints",
       "profile": "us",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:07:48Z",
       "status": "passed"
     },
     {
-      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpoin3q0t7/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine-core\": \"3.26.1\", \"policyengine-us\": \"1.691.3\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpr14xmpzh/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine\": \"4.4.4\", \"policyengine-core\": \"3.26.1\", \"policyengine-us\": \"1.691.3\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:07:49Z",
       "name": "verify_direct_package_versions",
       "profile": "us",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:07:49Z",
       "status": "passed"
     },
     {
-      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpoin3q0t7/venv/bin/python -c import policyengine_core\nimport policyengine_us\n",
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpr14xmpzh/venv/bin/python -c import policyengine\nimport policyengine_core\nimport policyengine_us\n",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:08:15Z",
       "name": "import_smoke",
       "profile": "us",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:07:49Z",
       "status": "passed"
     },
     {
-      "command": "/var/folders/qf/7fglpnr94wsc5xgbqkp80xbw0000gn/T/tmpoin3q0t7/venv/bin/python -c from policyengine_us import Simulation\nsimulation = Simulation(situation={'people': {'person': {'age': {'2026': 35}, 'employment_income': {'2026': 1_000}}}, 'households': {'household': {'members': ['person'], 'state_code': {'2026': 'CA'}}}, 'tax_units': {'tax_unit': {'members': ['person'], 'filing_status': {'2026': 'SINGLE'}}}, 'spm_units': {'spm_unit': {'members': ['person']}}, 'families': {'family': {'members': ['person']}}, 'marital_units': {'marital_unit': {'members': ['person']}}, })\nsimulation.calculate('age', '2026')\n",
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpr14xmpzh/venv/bin/python -c import policyengine as pe\npe.us.calculate_household(people=[{'age': 35}], tax_unit={'filing_status': 'SINGLE'}, year=2026)\n",
       "details": {
         "target": "py313",
         "validated_on_platform": "macos"
       },
-      "ended_at": "2026-06-03T19:19:37Z",
+      "ended_at": "2026-05-13T13:08:31Z",
       "name": "us_household_smoke",
       "profile": "us",
       "python_version": "3.13",
-      "started_at": "2026-06-03T19:19:37Z",
+      "started_at": "2026-05-13T13:08:15Z",
       "status": "passed"
     }
   ],
-  "generated_at": "2026-06-03T19:19:37Z",
+  "generated_at": "2026-05-13T13:08:34Z",
   "metadata": {
     "generated_by": "scripts/validate_bundle.py",
     "validate_runtime": true,

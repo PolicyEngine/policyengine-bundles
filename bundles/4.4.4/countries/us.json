@@ -37,10 +37,9 @@
       "version": "1.691.3",
       "wheel_url": "https://files.pythonhosted.org/packages/2a/03/e21c872664f90dcc99f1fcf29d1da71409c50cf8a7798ff0596ad10d9400/policyengine_us-1.691.3-py3-none-any.whl"
     },
-    "compatibility_basis": "data_release_build_package_match",
+    "compatibility_basis": "release_manifest_exact_compatibility",
     "data_build_fingerprint": "sha256:d891044ece8ec3338904771c879b98ec11a12f1090c074e5b8cee846825d8056",
     "data_build_id": "policyengine-us-data-1.113.1",
-    "evidence": [],
     "metadata": {}
   },
   "core_package": {

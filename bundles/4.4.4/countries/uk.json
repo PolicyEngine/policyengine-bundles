@@ -37,10 +37,9 @@
       "version": "2.88.14",
       "wheel_url": "https://files.pythonhosted.org/packages/a3/fc/276fb639a46bda35523329d8968bcc4089fde9e97fab82722c0ec853c6cc/policyengine_uk-2.88.14-py3-none-any.whl"
     },
-    "compatibility_basis": "data_release_build_package_match",
+    "compatibility_basis": "release_manifest_exact_compatibility",
     "data_build_fingerprint": "sha256:dff5c5bb976ce254fa965ecfce6a0d84859fe1629a714ae28a79b3075522a0ae",
     "data_build_id": "policyengine-uk-data-1.55.5",
-    "evidence": [],
     "metadata": {}
   },
   "core_package": {
