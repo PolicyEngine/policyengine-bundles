@@ -8,6 +8,7 @@ import pytest
 from conftest import fake_resolver, release_manifest, write_candidate, write_json
 
 from policyengine_bundles.generation import LoadedManifest, generate_bundle
+from policyengine_bundles.models import PackagePin, RuntimeComponentMetadata
 from policyengine_bundles.validation import load_bundle_directory
 
 
@@ -26,6 +27,9 @@ def test_generate_bundle_from_candidate(tmp_path: Path) -> None:
 
     bundle = load_bundle_directory(output_dir)
     assert bundle.manifest.bundle_version == "4.4.0"
+    assert bundle.manifest.policyengine.role == "bundle_carrier"
+    assert bundle.manifest.policyengine.sha256 is None
+    assert bundle.manifest.packages["policyengine"] == bundle.manifest.policyengine
     assert bundle.manifest.profiles["us"].packages == [
         "policyengine",
         "policyengine-core",
@@ -33,6 +37,10 @@ def test_generate_bundle_from_candidate(tmp_path: Path) -> None:
     ]
     assert bundle.countries["us"].core_package.version == "3.26.0"
     assert bundle.countries["us"].default_dataset == "enhanced_cps_2024"
+    assert (
+        bundle.countries["us"].certification.compatibility_basis
+        == "data_release_build_package_match"
+    )
 
 
 def test_generate_bundle_accepts_legacy_release_manifest_created_at(
@@ -200,8 +208,111 @@ def test_generate_bundle_rejects_core_mismatch(tmp_path: Path) -> None:
             candidate_path,
             tmp_path / "bundle",
             package_resolver=fake_resolver,
+            component_metadata_resolver=lambda _: None,
             testing_only=True,
         )
+
+
+def test_generate_bundle_certifies_matching_runtime_data_build_fingerprint(
+    tmp_path: Path,
+) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, release_manifest(model_package_version="0.9.0"))
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+
+    def component_metadata_resolver(
+        package: PackagePin,
+    ) -> RuntimeComponentMetadata | None:
+        if package.name == "policyengine-us":
+            return RuntimeComponentMetadata(
+                name="policyengine-us",
+                version="1.0.0",
+                data_build_fingerprint="sha256:" + "b" * 64,
+            )
+        if package.name == "policyengine-core":
+            return RuntimeComponentMetadata(
+                name="policyengine-core",
+                version="3.26.0",
+            )
+        return None
+
+    generate_bundle(
+        candidate_path,
+        tmp_path / "bundle",
+        package_resolver=fake_resolver,
+        component_metadata_resolver=component_metadata_resolver,
+        testing_only=True,
+    )
+
+    certification = (
+        load_bundle_directory(tmp_path / "bundle").countries["us"].certification
+    )
+    assert certification.compatibility_basis == "matching_data_build_fingerprint"
+    assert certification.runtime_model_package is not None
+    assert certification.runtime_model_package.version == "1.0.0"
+    assert certification.runtime_core_package is not None
+    assert certification.runtime_core_package.version == "3.26.0"
+
+
+def test_generate_bundle_rejects_manifest_compatibility_without_runtime_certification(
+    tmp_path: Path,
+) -> None:
+    payload = release_manifest(model_package_version="0.9.0")
+    payload["compatible_model_packages"] = [
+        {"name": "policyengine-us", "specifier": "==1.0.0"}
+    ]
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, payload)
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+
+    with pytest.raises(ValueError, match="not certified for policyengine-us==1.0.0"):
+        generate_bundle(
+            candidate_path,
+            tmp_path / "bundle",
+            package_resolver=fake_resolver,
+            component_metadata_resolver=lambda _: None,
+            testing_only=True,
+        )
+
+
+def test_generate_bundle_accepts_manual_runtime_certification(
+    tmp_path: Path,
+) -> None:
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, release_manifest(model_package_version="0.9.0"))
+    candidate_path = write_candidate(tmp_path, release_path.as_uri())
+    candidate = json.loads(candidate_path.read_text())
+    candidate["countries"]["us"]["certification"] = {
+        "basis": "manual_runtime_certification",
+        "certified_by": "PolicyEngine",
+        "reason": "Reviewed country package change against the data release.",
+        "evidence": [
+            {
+                "kind": "pull_request",
+                "uri": "https://github.com/PolicyEngine/policyengine-us/pull/1",
+            }
+        ],
+    }
+    write_json(candidate_path, candidate)
+
+    generate_bundle(
+        candidate_path,
+        tmp_path / "bundle",
+        package_resolver=fake_resolver,
+        component_metadata_resolver=lambda _: None,
+        testing_only=True,
+    )
+
+    certification = (
+        load_bundle_directory(tmp_path / "bundle").countries["us"].certification
+    )
+    assert certification.compatibility_basis == "manual_runtime_certification"
+    assert certification.certified_by == "PolicyEngine"
+    assert (
+        certification.metadata["reason"]
+        == "Reviewed country package change against the data release."
+    )
+    assert certification.evidence[0].kind == "pull_request"
 
 
 def test_generate_bundle_rejects_certified_artifact_without_sha(tmp_path: Path) -> None:

@@ -225,6 +225,33 @@ manifest URIs. Data release manifests may be loaded from `file://` paths for
 local testing or from `hf://...` references for Hugging Face artifacts. Private
 Hugging Face reads use `HF_TOKEN`, `HUGGING_FACE_HUB_TOKEN`, or
 `HUGGING_FACE_TOKEN` when set.
+
+Runtime compatibility is certified by the bundle, not by mutating the data
+release manifest. A country passes certification when the data release was built
+with the same country and core package pins, when the selected country package
+emits runtime metadata with the same `data_build_fingerprint` and the same core
+pin, or when the candidate includes an explicit manual runtime certification:
+
+```json
+{
+  "countries": {
+    "us": {
+      "model_package": "policyengine-us",
+      "data_release_manifest_uri": "hf://model/policyengine/policyengine-us-data@1.73.0/release_manifest.json",
+      "certification": {
+        "basis": "manual_runtime_certification",
+        "certified_by": "PolicyEngine",
+        "reason": "Reviewed policyengine-us 1.715.2 against this data release."
+      }
+    }
+  }
+}
+```
+
+The `compatible_model_packages` and `compatible_core_packages` fields in data
+release manifests are retained for readability and older producers, but they are
+not the certification gate for bundle generation.
+
 The canonical Hugging Face URI form is
 `hf://{repo_type}/{org}/{repo}@{revision}/{path}`, for example
 `hf://model/policyengine/policyengine-us-data@1.73.0/release_manifest.json`.
@@ -293,7 +320,9 @@ Validation checks that certified data artifacts are reachable and match their
 declared hashes, creates clean profile environments from the generated
 constraints, verifies direct package versions, imports the profile packages, and
 runs country household smoke checks where supported for every profile and every
-declared install target. The resulting
+declared install target. If `policyengine` is a pre-release bundle carrier and
+is excluded from the runtime install, the smoke checks use the installed country
+packages directly. The resulting
 `validation-report.json` is part of the bundle contract.
 Runtime validation records the current runner platform in check details, but
 platform-specific lockfiles are intentionally out of scope for this contract.

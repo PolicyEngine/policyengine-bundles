@@ -28,9 +28,11 @@ def generated_bundle(tmp_path: Path) -> Path:
 def test_solve_lockfiles_records_generated_install_artifacts(tmp_path: Path) -> None:
     bundle_dir = generated_bundle(tmp_path)
     commands: list[list[str]] = []
+    requirements_inputs: list[str] = []
 
     def fake_runner(command: list[str]) -> None:
         commands.append(command)
+        requirements_inputs.append(Path(command[3]).read_text())
         output_path = Path(command[command.index("--output-file") + 1])
         output_path.write_text("# generated\n")
 
@@ -58,6 +60,8 @@ def test_solve_lockfiles_records_generated_install_artifacts(tmp_path: Path) -> 
         DEFAULT_PYTHON_PLATFORM
     )
     assert commands[1][commands[1].index("--format") + 1] == "pylock.toml"
+    assert all("policyengine==" not in text for text in requirements_inputs)
+    assert all("policyengine-core==3.26.0" in text for text in requirements_inputs)
     assert bundle.manifest.metadata["install_artifact_layout"] == (
         "install/{profile}/{python}/"
     )

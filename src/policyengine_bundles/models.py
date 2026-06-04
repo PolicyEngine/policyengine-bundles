@@ -5,6 +5,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from policyengine_bundles.python_versions import python_version_key_map
+
 
 class BundleModel(BaseModel):
     """Base model for strict bundle metadata contracts."""
@@ -44,6 +46,7 @@ class PackagePin(BundleModel):
     version: str | None = None
     specifier: str | None = None
     resolution_status: Literal["pinned", "specifier_only", "unresolved"] | None = None
+    role: Literal["runtime_dependency", "bundle_carrier"] | None = None
     wheel_url: str | None = None
     sdist_url: str | None = None
     sha256: str | None = None
@@ -55,6 +58,10 @@ class PackagePin(BundleModel):
         if self.version is None and self.specifier is None:
             raise ValueError("Package pins require either version or specifier.")
         return self
+
+    @property
+    def is_bundle_carrier(self) -> bool:
+        return self.role == "bundle_carrier"
 
 
 class RuntimeComponentMetadata(BundleModel):
@@ -77,6 +84,7 @@ class DataPackageReference(BundleModel):
     repo_id: str
     repo_type: str = "model"
     release_manifest_path: str = "release_manifest.json"
+    release_manifest_revision: str | None = None
 
     @model_validator(mode="after")
     def validate_release_manifest_path(self) -> DataPackageReference:
@@ -101,6 +109,24 @@ class PreservationMirror(BundleModel):
     doi: str | None = None
     sha256: str | None = None
     deposited_at: str | None = None
+
+
+class CertificationEvidence(BundleModel):
+    kind: str
+    subject: str | None = None
+    subject_sha256: str | None = None
+    uri: str | None = None
+    signer: str | None = None
+    signature: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class ArtifactCertification(BundleModel):
+    certified_by: str
+    certified_at: str | None = None
+    scopes: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+    evidence: list[CertificationEvidence] = Field(default_factory=list)
 
 
 class DataArtifact(BundleModel):
@@ -136,6 +162,20 @@ class DataArtifact(BundleModel):
                     "if": {
                         "properties": {
                             "status": {
+                                "enum": ["partially_certified", "hash_pinned"],
+                            }
+                        },
+                        "required": ["status"],
+                    },
+                    "then": {
+                        "required": ["sha256"],
+                        "properties": {"sha256": {"type": "string"}},
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {
+                            "status": {
                                 "enum": ["unverified", "unavailable"],
                             }
                         },
@@ -144,6 +184,20 @@ class DataArtifact(BundleModel):
                     "then": {
                         "required": ["missing_reason"],
                         "properties": {"missing_reason": {"type": "string"}},
+                    },
+                },
+                {
+                    "if": {
+                        "properties": {"status": {"const": "partially_certified"}},
+                        "required": ["status"],
+                    },
+                    "then": {
+                        "required": ["certification"],
+                        "properties": {
+                            "certification": {
+                                "required": ["scopes", "limitations"],
+                            }
+                        },
                     },
                 },
             ],
@@ -155,12 +209,20 @@ class DataArtifact(BundleModel):
     path: str | None = None
     repo_id: str | None = None
     revision: str | None = None
-    status: Literal["certified", "unverified", "unavailable"] = "certified"
+    status: Literal[
+        "certified",
+        "partially_certified",
+        "hash_pinned",
+        "unverified",
+        "unavailable",
+    ] = "certified"
     sha256: str | None = None
+    metadata_sha256: str | None = None
     missing_reason: str | None = None
     size_bytes: int | None = None
     release_manifest_artifact_key: str | None = None
     preservation_mirrors: list[PreservationMirror] = Field(default_factory=list)
+    certification: ArtifactCertification | None = None
     metadata: dict[str, Any] = Field(default_factory=dict)
 
     @model_validator(mode="after")
@@ -169,8 +231,22 @@ class DataArtifact(BundleModel):
             raise ValueError("Data artifacts require uri or path/repo_id/revision.")
         if self.status == "certified" and self.sha256 is None:
             raise ValueError("Certified data artifacts require sha256.")
-        if self.status != "certified" and self.missing_reason is None:
+        if (
+            self.status in {"partially_certified", "hash_pinned"}
+            and self.sha256 is None
+        ):
+            raise ValueError(
+                "Partially certified and hash-pinned data artifacts require sha256."
+            )
+        if self.status in {"unverified", "unavailable"} and self.missing_reason is None:
             raise ValueError("Unverified/unavailable artifacts require missing_reason.")
+        if self.status == "partially_certified":
+            if self.certification is None:
+                raise ValueError("Partially certified artifacts require certification.")
+            if not self.certification.scopes:
+                raise ValueError("Partially certified artifacts require scopes.")
+            if not self.certification.limitations:
+                raise ValueError("Partially certified artifacts require limitations.")
         return self
 
 
@@ -204,6 +280,60 @@ class DataReleaseManifest(BundleModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class CandidateRuntimeCertification(BundleModel):
+    basis: Literal["manual_runtime_certification"] = "manual_runtime_certification"
+    certified_by: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
+    evidence: list[CertificationEvidence] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class CandidateCountry(BundleModel):
+    model_package: str
+    data_release_manifest_uri: str
+    certification: CandidateRuntimeCertification | None = None
+
+
+class BundleCandidate(BundleModel):
+    schema_version: Literal[1]
+    bundle_version: str
+    policyengine_version: str
+    python_versions: list[str] = Field(min_length=1)
+    profiles: list[str]
+    packages: dict[str, str]
+    countries: dict[str, CandidateCountry]
+
+    @model_validator(mode="after")
+    def validate_candidate(self) -> BundleCandidate:
+        if self.policyengine_version != self.bundle_version:
+            raise ValueError(
+                "Candidate policyengine_version must match bundle_version. "
+                "The bundle version is the human-facing policyengine version."
+            )
+        if "policyengine-core" not in self.packages:
+            raise ValueError("Candidate packages must include policyengine-core.")
+        if not self.countries:
+            raise ValueError("Candidate must include at least one country.")
+        if not self.profiles:
+            raise ValueError("Candidate must include at least one profile.")
+        python_version_key_map(
+            self.python_versions,
+            field_name="candidate python_versions",
+        )
+        for country_id, country in self.countries.items():
+            if country.model_package not in self.packages:
+                raise ValueError(
+                    f"Country {country_id!r} references unknown model package "
+                    f"{country.model_package!r}."
+                )
+        for profile in self.profiles:
+            if profile != "all" and profile not in self.countries:
+                raise ValueError(
+                    f"Profile {profile!r} must be 'all' or a candidate country id."
+                )
+        return self
+
+
 class RegionDataset(BundleModel):
     path_template: str
     uri_template: str | None = None
@@ -231,6 +361,9 @@ class CountryCertification(BundleModel):
     certified_by: str
     data_build_id: str | None = None
     data_build_fingerprint: str | None = None
+    runtime_model_package: RuntimeComponentMetadata | None = None
+    runtime_core_package: RuntimeComponentMetadata | PackagePin | None = None
+    evidence: list[CertificationEvidence] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -274,6 +407,7 @@ class ValidationCheck(BundleModel):
     status: Literal["passed", "failed", "skipped"]
     profile: str | None = None
     country: str | None = None
+    artifact: str | None = None
     python_version: str | None = None
     command: str | None = None
     started_at: str | None = None

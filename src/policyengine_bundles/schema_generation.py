@@ -8,6 +8,7 @@ from typing import TypeAlias
 from pydantic import BaseModel
 
 from policyengine_bundles.models import (
+    BundleCandidate,
     BundleManifest,
     CountryBundle,
     DataReleaseManifest,
@@ -40,6 +41,15 @@ SCHEMA_SPECS: tuple[SchemaSpec, ...] = (
             "Top-level manifest that maps one policyengine release to certified "
             "country profiles, package pins, data manifests, and validation evidence."
         ),
+    ),
+    SchemaSpec(
+        filename="bundle-candidate.schema.json",
+        model=BundleCandidate,
+        schema_id=(
+            "https://policyengine.org/schemas/policyengine-bundle-candidate.schema.json"
+        ),
+        title="PolicyEngine bundle candidate",
+        description="Input candidate spec consumed by bundle generation.",
     ),
     SchemaSpec(
         filename="country-bundle.schema.json",

@@ -143,6 +143,8 @@ def _direct_requirements(
                 f"Profile {profile_name!r} references unknown package {package_name!r}."
             )
         pin = packages[package_name]
+        if pin.is_bundle_carrier:
+            continue
         if pin.version is None or pin.resolution_status != "pinned":
             raise ValueError(
                 f"Profile {profile_name!r} package {package_name!r} must be "

@@ -418,6 +418,11 @@ def _validate_profile_runtime(
     runner: CommandRunner,
 ) -> list[ValidationCheck]:
     profile = bundle.manifest.profiles[profile_name]
+    runtime_package_names = [
+        name
+        for name in profile.packages
+        if not bundle.manifest.packages[name].is_bundle_carrier
+    ]
     checks: list[ValidationCheck] = []
     checks.append(
         _validate_lockfile(
@@ -490,7 +495,7 @@ def _validate_profile_runtime(
                 [
                     str(python),
                     "-c",
-                    _package_version_check_code(bundle, profile.packages),
+                    _package_version_check_code(bundle, runtime_package_names),
                 ],
             ),
             (
@@ -498,14 +503,21 @@ def _validate_profile_runtime(
                 [
                     str(python),
                     "-c",
-                    _import_smoke_code(profile.packages),
+                    _import_smoke_code(runtime_package_names),
                 ],
             ),
         ]
         commands.extend(
             (
                 f"{country_id}_household_smoke",
-                [str(python), "-c", _household_smoke_code(country_id)],
+                [
+                    str(python),
+                    "-c",
+                    _household_smoke_code(
+                        country_id,
+                        use_bundle_carrier="policyengine" in runtime_package_names,
+                    ),
+                ],
             )
             for country_id in profile.countries
             if country_id in {"us", "uk"}
@@ -653,8 +665,24 @@ def _import_smoke_code(package_names: Sequence[str]) -> str:
     return "\n".join(f"import {module}" for module in imports) + "\n"
 
 
-def _household_smoke_code(country_id: str) -> str:
+def _household_smoke_code(country_id: str, *, use_bundle_carrier: bool) -> str:
     if country_id == "us":
+        if not use_bundle_carrier:
+            return (
+                "from policyengine_us import Simulation\n"
+                "simulation = Simulation(situation={"
+                "'people': {'person': {'age': {'2026': 35}, "
+                "'employment_income': {'2026': 1_000}}}, "
+                "'households': {'household': {'members': ['person'], "
+                "'state_code': {'2026': 'CA'}}}, "
+                "'tax_units': {'tax_unit': {'members': ['person'], "
+                "'filing_status': {'2026': 'SINGLE'}}}, "
+                "'spm_units': {'spm_unit': {'members': ['person']}}, "
+                "'families': {'family': {'members': ['person']}}, "
+                "'marital_units': {'marital_unit': {'members': ['person']}}, "
+                "})\n"
+                "simulation.calculate('age', '2026')\n"
+            )
         return (
             "import policyengine as pe\n"
             "pe.us.calculate_household("
@@ -664,6 +692,17 @@ def _household_smoke_code(country_id: str) -> str:
             ")\n"
         )
     if country_id == "uk":
+        if not use_bundle_carrier:
+            return (
+                "from policyengine_uk import Simulation\n"
+                "simulation = Simulation(situation={"
+                "'people': {'person': {'age': {'2026': 35}, "
+                "'employment_income': {'2026': 0}}}, "
+                "'benunits': {'benunit': {'members': ['person']}}, "
+                "'households': {'household': {'members': ['person']}}, "
+                "})\n"
+                "simulation.calculate('age', '2026')\n"
+            )
         return (
             "import policyengine as pe\n"
             "pe.uk.calculate_household(people=[{'age': 35}], year=2026)\n"
