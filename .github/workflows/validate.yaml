@@ -35,17 +35,63 @@ jobs:
       HUGGING_FACE_TOKEN: ${{ secrets.HUGGING_FACE_TOKEN }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
       - uses: astral-sh/setup-uv@v8.1.0
+      - name: Detect bundle artifact changes
+        id: bundle-changes
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import os
+          import subprocess
+
+          event_name = os.environ["EVENT_NAME"]
+          if event_name == "workflow_dispatch":
+              print("changed=true")
+              raise SystemExit
+
+          base_sha = os.environ["BASE_SHA"]
+          head_sha = os.environ["HEAD_SHA"]
+          if not base_sha or base_sha == "0000000000000000000000000000000000000000":
+              command = [
+                  "git",
+                  "diff-tree",
+                  "--no-commit-id",
+                  "--name-only",
+                  "-r",
+                  head_sha,
+              ]
+          else:
+              command = ["git", "diff", "--name-only", base_sha, head_sha]
+
+          changed_paths = subprocess.check_output(command, text=True).splitlines()
+          changed = any(
+              path.startswith(("bundles/", "candidates/"))
+              for path in changed_paths
+          )
+          print(f"changed={str(changed).lower()}")
+          PY
+      - name: Skip certification when bundle artifacts are unchanged
+        if: steps.bundle-changes.outputs.changed != 'true'
+        run: echo "No candidates/** or bundles/** changes; skipping bundle regeneration."
       - name: Install validation tooling
+        if: steps.bundle-changes.outputs.changed == 'true'
         run: python -m pip install --upgrade -e ".[dev]"
       - name: Confirm private data access is configured
+        if: steps.bundle-changes.outputs.changed == 'true'
         run: test -n "$HUGGING_FACE_TOKEN"
       - name: Create work directory
+        if: steps.bundle-changes.outputs.changed == 'true'
         run: mkdir -p .tmp
       - name: Select latest candidate
+        if: steps.bundle-changes.outputs.changed == 'true'
         id: latest
         run: |
           python - <<'PY' >> "$GITHUB_OUTPUT"
@@ -71,20 +117,25 @@ jobs:
           print(f"committed=bundles/{version}")
           PY
       - name: Generate bundle
+        if: steps.bundle-changes.outputs.changed == 'true'
         run: |
           python scripts/generate_bundle.py \
             --input "${{ steps.latest.outputs.candidate }}" \
             --output "${{ steps.latest.outputs.output }}"
       - name: Solve lockfiles
+        if: steps.bundle-changes.outputs.changed == 'true'
         run: python scripts/solve_lockfiles.py "${{ steps.latest.outputs.output }}"
       - name: Validate bundle
+        if: steps.bundle-changes.outputs.changed == 'true'
         run: python scripts/validate_bundle.py "${{ steps.latest.outputs.output }}"
       - name: Compare regenerated bundle to committed bundle
+        if: steps.bundle-changes.outputs.changed == 'true'
         run: |
           python scripts/compare_bundle_directories.py \
             "${{ steps.latest.outputs.committed }}" \
             "${{ steps.latest.outputs.output }}"
       - uses: actions/upload-artifact@v4
+        if: steps.bundle-changes.outputs.changed == 'true'
         with:
           name: policyengine-bundle-${{ steps.latest.outputs.bundle_version }}-all
           path: ${{ steps.latest.outputs.output }}
