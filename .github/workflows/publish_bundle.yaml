@@ -1,0 +1,105 @@
+name: Publish bundle
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - candidates/**
+      - bundles/**
+  workflow_dispatch:
+    inputs:
+      bundle_version:
+        description: "Optional committed bundle version. Defaults to latest candidate."
+        required: false
+        default: ""
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    env:
+      HUGGING_FACE_TOKEN: ${{ secrets.HUGGING_FACE_TOKEN }}
+      POLICYENGINE_PY_REPO: PolicyEngine/policyengine.py
+      POLICYENGINE_PY_BASE_BRANCH: main
+    steps:
+      - name: Generate GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: PolicyEngine
+          repositories: |
+            policyengine-bundles
+            policyengine.py
+
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - uses: astral-sh/setup-uv@v8.1.0
+
+      - name: Install bundle tooling
+        run: python -m pip install --upgrade -e ".[dev]"
+
+      - name: Confirm private data access is configured
+        run: test -n "$HUGGING_FACE_TOKEN"
+
+      - name: Select bundle to publish
+        id: bundle
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+          EVENT_NAME: ${{ github.event_name }}
+          REQUESTED_BUNDLE_VERSION: ${{ github.event.inputs.bundle_version || '' }}
+        run: python scripts/select_bundle_to_publish.py
+
+      - name: Generate, solve, and validate bundle from committed candidate
+        run: python scripts/generate_validate_committed_bundle.py --candidate "${{ steps.bundle.outputs.candidate }}" --output "${{ steps.bundle.outputs.generated_bundle }}"
+
+      - name: Compare regenerated bundle to committed bundle
+        run: |
+          python scripts/compare_bundle_directories.py \
+            "${{ steps.bundle.outputs.committed_bundle }}" \
+            "${{ steps.bundle.outputs.generated_bundle }}"
+
+      - name: Package release assets
+        run: |
+          python scripts/package_bundle_release.py \
+            "${{ steps.bundle.outputs.generated_bundle }}" \
+            --output-dir .tmp/dist
+
+      - name: Check existing bundle release
+        id: release
+        env:
+          BUNDLE_VERSION: ${{ steps.bundle.outputs.bundle_version }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: python scripts/check_existing_bundle_release.py --bundle-version "$BUNDLE_VERSION" --dist-dir .tmp/dist --repo "$GITHUB_REPOSITORY"
+
+      - name: Publish immutable bundle release assets
+        if: ${{ steps.release.outputs.exists != 'true' }}
+        env:
+          BUNDLE_VERSION: ${{ steps.bundle.outputs.bundle_version }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: python scripts/publish_bundle_release_assets.py "$BUNDLE_VERSION" --dist-dir .tmp/dist --target-sha "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY"
+
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ env.POLICYENGINE_PY_REPO }}
+          ref: ${{ env.POLICYENGINE_PY_BASE_BRANCH }}
+          token: ${{ steps.app-token.outputs.token }}
+          path: policyengine.py
+
+      - name: Open policyengine.py consuming PR
+        env:
+          BUNDLE_VERSION: ${{ steps.bundle.outputs.bundle_version }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: bash scripts/open_policyengine_py_consuming_pr.sh
