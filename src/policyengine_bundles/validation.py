@@ -3,29 +3,14 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import Any
 
 from policyengine_bundles.io import load_json
 from policyengine_bundles.models import (
     BundleManifest,
     CountryBundle,
-    InstallTarget,
     PackagePin,
-    RuntimeComponentMetadata,
     ValidationReport,
 )
-from policyengine_bundles.python_versions import (
-    metadata_python_versions,
-    python_version_key,
-)
-
-
-def load_component_metadata(
-    payload: Mapping[str, Any],
-) -> RuntimeComponentMetadata:
-    """Validate dependency-free metadata emitted by a component package."""
-
-    return RuntimeComponentMetadata.model_validate(payload)
 
 
 @dataclass(frozen=True)
@@ -37,12 +22,7 @@ class BundleDirectory:
 
 
 def load_bundle_directory(bundle_dir: Path | str) -> BundleDirectory:
-    """Load and type-check a bundle directory.
-
-    This function intentionally does not perform external reachability,
-    checksum, or install validation. It only verifies that the local bundle
-    files conform to the canonical model contracts.
-    """
+    """Load and type-check a registry-only bundle directory."""
 
     root = Path(bundle_dir)
     manifest = BundleManifest.model_validate(load_json(root / "bundle.json"))
@@ -88,35 +68,6 @@ def _validate_bundle_directory_contract(
             f"{manifest.bundle_version!r}."
         )
 
-    declared_python_versions = metadata_python_versions(manifest.metadata)
-    for profile_name, profile in manifest.profiles.items():
-        missing_packages = [
-            package_name
-            for package_name in profile.packages
-            if package_name not in manifest.packages
-        ]
-        if missing_packages:
-            raise ValueError(
-                f"Profile {profile_name!r} references unknown packages: "
-                f"{', '.join(sorted(missing_packages))}."
-            )
-
-        missing_countries = [
-            country_id
-            for country_id in profile.countries
-            if country_id not in countries
-        ]
-        if missing_countries:
-            raise ValueError(
-                f"Profile {profile_name!r} references unknown countries: "
-                f"{', '.join(sorted(missing_countries))}."
-            )
-        _validate_install_targets(
-            profile_name=profile_name,
-            install_targets=profile.install_targets,
-            declared_python_versions=declared_python_versions,
-        )
-
     for country_id, country in countries.items():
         if country.country_id != country_id:
             raise ValueError(
@@ -141,6 +92,26 @@ def _validate_bundle_directory_contract(
             package=country.core_package,
             field_name="core_package",
         )
+        if country.compatibility.model_package.model_dump(
+            exclude_none=True
+        ) != country.model_package.model_dump(exclude_none=True):
+            raise ValueError(
+                f"Country {country_id!r} compatibility model_package does not match."
+            )
+        if country.compatibility.core_package.model_dump(
+            exclude_none=True
+        ) != country.core_package.model_dump(exclude_none=True):
+            raise ValueError(
+                f"Country {country_id!r} compatibility core_package does not match."
+            )
+        if (
+            country.compatibility.data_package.name != country.data_package.name
+            or country.compatibility.data_package.version
+            != country.data_package.version
+        ):
+            raise ValueError(
+                f"Country {country_id!r} compatibility data_package does not match."
+            )
 
 
 def _validate_package_matches_manifest(
@@ -163,27 +134,6 @@ def _validate_package_matches_manifest(
             f"Country {country_id!r} {field_name} for {package.name!r} does not "
             "match bundle.json packages entry."
         )
-
-
-def _validate_install_targets(
-    *,
-    profile_name: str,
-    install_targets: Mapping[str, InstallTarget],
-    declared_python_versions: list[str] | None,
-) -> None:
-    if install_targets and declared_python_versions is None:
-        raise ValueError(
-            f"Profile {profile_name!r} install_targets require "
-            "bundle metadata.python_versions."
-        )
-    for target_key, install_target in install_targets.items():
-        expected_key = python_version_key(install_target.python_version)
-        if target_key != expected_key:
-            raise ValueError(
-                f"Profile {profile_name!r} install target key {target_key!r} "
-                f"does not match python_version {install_target.python_version!r}; "
-                f"expected {expected_key!r}."
-            )
 
 
 def _validate_bundle_manifest_paths(manifest: BundleManifest) -> None:

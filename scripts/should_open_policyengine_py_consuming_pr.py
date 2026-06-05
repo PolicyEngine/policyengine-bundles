@@ -47,6 +47,14 @@ def load_release_bundle_manifest(*, version: str, dist_dir: Path) -> dict[str, A
 def should_open_policyengine_py_consuming_pr(
     bundle: dict[str, Any],
 ) -> tuple[bool, str]:
+    bundle_version = bundle.get("bundle_version", "unknown")
+    if bundle.get("schema_version") != 1:
+        return (
+            False,
+            f"Skipping policyengine.py consuming PR for bundle {bundle_version}: "
+            "automated importer does not yet support bundle schema v2.",
+        )
+
     packages = bundle.get("packages")
     if not isinstance(packages, dict):
         raise TypeError("bundle packages must be an object")
@@ -56,7 +64,6 @@ def should_open_policyengine_py_consuming_pr(
         for package in REQUIRED_POLICYENGINE_PY_IMPORT_PACKAGES
         if package not in packages
     ]
-    bundle_version = bundle.get("bundle_version", "unknown")
     if missing:
         missing_text = ", ".join(missing)
         return (

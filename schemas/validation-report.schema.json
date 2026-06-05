@@ -15,18 +15,6 @@
           "default": null,
           "title": "Artifact"
         },
-        "command": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Command"
-        },
         "country": {
           "anyOf": [
             {
@@ -44,69 +32,9 @@
           "title": "Details",
           "type": "object"
         },
-        "ended_at": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Ended At"
-        },
-        "log_uri": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Log Uri"
-        },
         "name": {
           "title": "Name",
           "type": "string"
-        },
-        "profile": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Profile"
-        },
-        "python_version": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Python Version"
-        },
-        "started_at": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Started At"
         },
         "status": {
           "enum": [
@@ -153,7 +81,7 @@
       "type": "object"
     },
     "schema_version": {
-      "const": 1,
+      "const": 2,
       "title": "Schema Version",
       "type": "integer"
     },

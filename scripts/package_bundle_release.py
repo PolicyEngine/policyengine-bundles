@@ -8,7 +8,7 @@ from policyengine_bundles.release import package_bundle_release
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Create immutable release artifacts for a certified bundle."
+        description="Create immutable release artifacts for a validated bundle."
     )
     parser.add_argument("bundle_dir", type=Path)
     parser.add_argument(

@@ -7,18 +7,18 @@ from policyengine_bundles.models import (
     BundleManifest,
     CountryBundle,
     DataReleaseManifest,
-    RuntimeComponentMetadata,
     ValidationReport,
 )
-from policyengine_bundles.validation import (
-    load_bundle_directory,
-    load_component_metadata,
-)
+from policyengine_bundles.validation import load_bundle_directory
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BUNDLE_ROOTS = [
     REPO_ROOT / "examples" / "bundles",
     REPO_ROOT / "bundles",
+]
+CANDIDATE_ROOTS = [
+    REPO_ROOT / "examples" / "candidates",
+    REPO_ROOT / "candidates",
 ]
 
 
@@ -30,16 +30,12 @@ def iter_bundle_dirs() -> list[Path]:
     return bundle_dirs
 
 
-def validate_component_metadata_contract() -> None:
-    metadata = load_component_metadata(
-        {
-            "name": "policyengine-core",
-            "version": "3.25.3",
-            "git_sha": "abc123",
-            "wheel_sha256": "0" * 64,
-        }
-    )
-    assert metadata.name == "policyengine-core"
+def iter_candidate_paths() -> list[Path]:
+    candidate_paths: list[Path] = []
+    for root in CANDIDATE_ROOTS:
+        if root.exists():
+            candidate_paths.extend(sorted(root.glob("*.json")))
+    return candidate_paths
 
 
 def validate_model_schema_export() -> None:
@@ -48,7 +44,6 @@ def validate_model_schema_export() -> None:
         BundleManifest,
         CountryBundle,
         DataReleaseManifest,
-        RuntimeComponentMetadata,
         ValidationReport,
     ):
         schema = model.model_json_schema()
@@ -88,6 +83,13 @@ def validate_data_release_preservation_contract() -> None:
 
 
 def main() -> int:
+    candidate_paths = iter_candidate_paths()
+    if not candidate_paths:
+        raise SystemExit("No example or release bundle candidates found.")
+    for candidate_path in candidate_paths:
+        BundleCandidate.model_validate_json(candidate_path.read_text())
+        print(f"candidate model ok: {candidate_path.relative_to(REPO_ROOT)}")
+
     bundle_dirs = iter_bundle_dirs()
     if not bundle_dirs:
         raise SystemExit("No example or release bundle directories found.")
@@ -95,9 +97,6 @@ def main() -> int:
     for bundle_dir in bundle_dirs:
         bundle = load_bundle_directory(bundle_dir)
         print(f"bundle models ok: {bundle.root.relative_to(REPO_ROOT)}")
-
-    validate_component_metadata_contract()
-    print("component metadata model ok")
 
     validate_data_release_preservation_contract()
     print("data release preservation model ok")

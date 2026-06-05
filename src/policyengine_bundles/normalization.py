@@ -6,7 +6,6 @@ from typing import Any
 
 from policyengine_bundles.io import load_json
 
-COMMENT_NORMALIZED_FILENAMES = {"constraints.txt", "pylock.toml"}
 IGNORED_FILE_NAMES = {".DS_Store"}
 
 
@@ -29,10 +28,7 @@ def normalized_file_content(root: Path, relative_path: Path) -> str:
         elif relative_path.as_posix() == "validation-report.json":
             payload = normalize_validation_report(payload)
         return json.dumps(payload, indent=2, sort_keys=True) + "\n"
-    text = path.read_text()
-    if path.name in COMMENT_NORMALIZED_FILENAMES:
-        return strip_comment_lines(text)
-    return text
+    return path.read_text()
 
 
 def normalize_bundle_manifest(payload: dict[str, Any]) -> dict[str, Any]:
@@ -55,12 +51,8 @@ def normalize_validation_report(payload: dict[str, Any]) -> dict[str, Any]:
         if isinstance(details, dict):
             details_payload = dict(details)
             details_payload.pop("validated_on_platform", None)
+            details_payload.pop("bundle_dir", None)
             check_payload["details"] = details_payload
         checks.append(check_payload)
     normalized["checks"] = checks
     return normalized
-
-
-def strip_comment_lines(text: str) -> str:
-    lines = [line for line in text.splitlines() if not line.lstrip().startswith("#")]
-    return "\n".join(lines) + ("\n" if text.endswith("\n") else "")

@@ -4,46 +4,14 @@ import json
 from pathlib import Path
 
 import pytest
-from conftest import fake_resolver, release_manifest, write_candidate, write_json
+from conftest import write_json
+from test_package_bundle_release import certified_bundle
 
-from policyengine_bundles.generation import generate_bundle
-from policyengine_bundles.lockfiles import solve_lockfiles
 from policyengine_bundles.release import (
     package_bundle_release,
     verify_and_unpack_bundle_release,
     verify_bundle_release_assets,
 )
-
-
-def certified_bundle(tmp_path: Path) -> Path:
-    release_path = tmp_path / "us-release-manifest.json"
-    write_json(release_path, release_manifest())
-    candidate_path = write_candidate(tmp_path, release_path.as_uri())
-    output_dir = tmp_path / "4.4.0"
-    generate_bundle(
-        candidate_path,
-        output_dir,
-        package_resolver=fake_resolver,
-        testing_only=True,
-    )
-
-    def fake_runner(command: list[str]) -> None:
-        output_path = Path(command[command.index("--output-file") + 1])
-        output_path.write_text("policyengine-core==3.26.0\n")
-
-    solve_lockfiles(output_dir, runner=fake_runner)
-    report_path = output_dir / "validation-report.json"
-    report = json.loads(report_path.read_text())
-    report["status"] = "passed"
-    report["metadata"] = {
-        "validation_scope": "full",
-        "verify_data": True,
-        "validate_runtime": True,
-    }
-    for check in report["checks"]:
-        check["status"] = "passed"
-    write_json(report_path, report)
-    return output_dir
 
 
 def test_verify_and_unpack_bundle_release_checks_digest(tmp_path: Path) -> None:

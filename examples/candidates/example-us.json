@@ -1,0 +1,14 @@
+{
+  "bundle_version": "4.14.0",
+  "countries": {
+    "us": {
+      "data_release_manifest_uri": "hf://model/policyengine/policyengine-us-data@1.104.0/release_manifest.json",
+      "model_package": "policyengine-us"
+    }
+  },
+  "packages": {
+    "policyengine-core": "3.26.0",
+    "policyengine-us": "1.715.2"
+  },
+  "schema_version": 2
+}

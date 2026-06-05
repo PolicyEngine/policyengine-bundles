@@ -12,7 +12,6 @@ from policyengine_bundles.models import (
     BundleManifest,
     CountryBundle,
     DataReleaseManifest,
-    RuntimeComponentMetadata,
     ValidationReport,
 )
 
@@ -38,8 +37,8 @@ SCHEMA_SPECS: tuple[SchemaSpec, ...] = (
         schema_id="https://policyengine.org/schemas/policyengine-bundle.schema.json",
         title="PolicyEngine bundle",
         description=(
-            "Top-level manifest that maps one policyengine release to certified "
-            "country profiles, package pins, data manifests, and validation evidence."
+            "Top-level manifest that maps one policyengine release to exact "
+            "package pins and country data release compatibility assertions."
         ),
     ),
     SchemaSpec(
@@ -59,20 +58,8 @@ SCHEMA_SPECS: tuple[SchemaSpec, ...] = (
         ),
         title="PolicyEngine country bundle",
         description=(
-            "Country-specific certification manifest for one PolicyEngine bundle."
-        ),
-    ),
-    SchemaSpec(
-        filename="component-runtime-metadata.schema.json",
-        model=RuntimeComponentMetadata,
-        schema_id=(
-            "https://policyengine.org/schemas/"
-            "policyengine-component-runtime-metadata.schema.json"
-        ),
-        title="PolicyEngine component runtime metadata",
-        description=(
-            "Dependency-free metadata emitted by component packages for bundle "
-            "certification."
+            "Country-specific package/data compatibility assertion for one "
+            "PolicyEngine bundle."
         ),
     ),
     SchemaSpec(

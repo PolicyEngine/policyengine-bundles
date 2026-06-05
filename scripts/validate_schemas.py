@@ -14,6 +14,10 @@ BUNDLE_ROOTS = [
     REPO_ROOT / "examples" / "bundles",
     REPO_ROOT / "bundles",
 ]
+CANDIDATE_ROOTS = [
+    REPO_ROOT / "examples" / "candidates",
+    REPO_ROOT / "candidates",
+]
 
 
 def load_json(path: Path) -> dict[str, Any]:
@@ -79,16 +83,33 @@ def iter_bundle_dirs() -> list[Path]:
     return bundle_dirs
 
 
+def iter_candidate_paths() -> list[Path]:
+    candidate_paths: list[Path] = []
+    for root in CANDIDATE_ROOTS:
+        if not root.exists():
+            continue
+        candidate_paths.extend(sorted(root.glob("*.json")))
+    return candidate_paths
+
+
 def main() -> int:
     validate_generated_schemas_current()
 
     bundle_schema = load_schema(SCHEMA_DIR / "bundle.schema.json")
+    candidate_schema = load_schema(SCHEMA_DIR / "bundle-candidate.schema.json")
     country_schema = load_schema(SCHEMA_DIR / "country-bundle.schema.json")
     validation_schema = load_schema(SCHEMA_DIR / "validation-report.schema.json")
 
     for schema_path in sorted(SCHEMA_DIR.glob("*.schema.json")):
         load_schema(schema_path)
         print(f"schema ok: {schema_path.relative_to(REPO_ROOT)}")
+
+    candidate_paths = iter_candidate_paths()
+    if not candidate_paths:
+        raise SystemExit("No example or release bundle candidates found.")
+    for candidate_path in candidate_paths:
+        validate_instance(candidate_schema, candidate_path)
+        print(f"candidate ok: {candidate_path.relative_to(REPO_ROOT)}")
 
     bundle_dirs = iter_bundle_dirs()
     if not bundle_dirs:

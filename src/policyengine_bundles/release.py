@@ -161,10 +161,10 @@ def _validate_release_ready(bundle: BundleDirectory) -> None:
             "Bundle release artifacts require a passing validation report; "
             f"got {report.status!r}."
         )
-    if report.metadata.get("validation_scope") != "full":
+    if report.metadata.get("validation_kind") != "registry":
         raise ValueError(
-            "Bundle release artifacts require validation_scope='full'; "
-            f"got {report.metadata.get('validation_scope')!r}."
+            "Bundle release artifacts require registry validation; "
+            f"got {report.metadata.get('validation_kind')!r}."
         )
     skipped_checks = _checks_with_status(report, "skipped")
     if skipped_checks:
@@ -186,14 +186,10 @@ def _checks_with_status(report: ValidationReport, status: str) -> list[str]:
 
 def _check_label(check: ValidationCheck) -> str:
     parts = [check.name]
-    if check.profile:
-        parts.append(f"profile={check.profile}")
     if check.country:
         parts.append(f"country={check.country}")
     if check.artifact:
         parts.append(f"artifact={check.artifact}")
-    if check.python_version:
-        parts.append(f"python={check.python_version}")
     return " ".join(parts)
 
 
@@ -283,5 +279,5 @@ def _extract_bundle_archive(
                 or member_path.parts[:1] != (expected_root,)
             ):
                 raise ValueError(f"Unsafe bundle archive member: {member.name}.")
-        archive.extractall(output_dir)
+        archive.extractall(output_dir, filter="data")
     return output_dir / expected_root

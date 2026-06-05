@@ -5,11 +5,10 @@ on:
     branches: [main]
     paths:
       - candidates/**
-      - bundles/**
   workflow_dispatch:
     inputs:
       bundle_version:
-        description: "Optional committed bundle version. Defaults to latest candidate."
+        description: "Optional bundle candidate version. Defaults to latest candidate."
         required: false
         default: ""
 
@@ -45,8 +44,6 @@ jobs:
         with:
           python-version: "3.13"
 
-      - uses: astral-sh/setup-uv@v8.1.0
-
       - name: Install bundle tooling
         run: python -m pip install --upgrade -e ".[dev]"
 
@@ -62,16 +59,12 @@ jobs:
           REQUESTED_BUNDLE_VERSION: ${{ github.event.inputs.bundle_version || '' }}
         run: python scripts/select_bundle_to_publish.py
 
-      - name: Generate, solve, and validate bundle from committed candidate
+      - name: Generate and validate bundle from candidate
+        if: ${{ steps.bundle.outputs.should_publish == 'true' }}
         run: python scripts/generate_validate_committed_bundle.py --candidate "${{ steps.bundle.outputs.candidate }}" --output "${{ steps.bundle.outputs.generated_bundle }}"
 
-      - name: Compare regenerated bundle to committed bundle
-        run: |
-          python scripts/compare_bundle_directories.py \
-            "${{ steps.bundle.outputs.committed_bundle }}" \
-            "${{ steps.bundle.outputs.generated_bundle }}"
-
       - name: Package release assets
+        if: ${{ steps.bundle.outputs.should_publish == 'true' }}
         run: |
           python scripts/package_bundle_release.py \
             "${{ steps.bundle.outputs.generated_bundle }}" \
@@ -79,13 +72,14 @@ jobs:
 
       - name: Check existing bundle release
         id: release
+        if: ${{ steps.bundle.outputs.should_publish == 'true' }}
         env:
           BUNDLE_VERSION: ${{ steps.bundle.outputs.bundle_version }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: python scripts/check_existing_bundle_release.py --bundle-version "$BUNDLE_VERSION" --dist-dir .tmp/dist --repo "$GITHUB_REPOSITORY"
 
       - name: Publish immutable bundle release assets
-        if: ${{ steps.release.outputs.exists != 'true' }}
+        if: ${{ steps.bundle.outputs.should_publish == 'true' && steps.release.outputs.exists != 'true' }}
         env:
           BUNDLE_VERSION: ${{ steps.bundle.outputs.bundle_version }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
@@ -93,6 +87,7 @@ jobs:
 
       - name: Check policyengine.py consuming PR support
         id: policyengine-py-consumer
+        if: ${{ steps.bundle.outputs.should_publish == 'true' }}
         env:
           BUNDLE_VERSION: ${{ steps.bundle.outputs.bundle_version }}
         run: python scripts/should_open_policyengine_py_consuming_pr.py "$BUNDLE_VERSION" --dist-dir .tmp/dist

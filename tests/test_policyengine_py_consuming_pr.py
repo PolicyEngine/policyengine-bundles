@@ -21,11 +21,13 @@ load_bundle_manifest = MODULE.load_release_bundle_manifest
 should_open_pr = MODULE.should_open_policyengine_py_consuming_pr
 
 
-def test__given_us_only_bundle__then_skips_policyengine_py_pr() -> None:
+def test__given_schema_v2_bundle__then_skips_policyengine_py_pr() -> None:
     bundle = {
+        "schema_version": 2,
         "bundle_version": "4.14.0",
         "packages": {
             "policyengine-core": {"version": "3.26.1"},
+            "policyengine-uk": {"version": "2.88.20"},
             "policyengine-us": {"version": "1.715.3"},
         },
     }
@@ -33,11 +35,12 @@ def test__given_us_only_bundle__then_skips_policyengine_py_pr() -> None:
     should_open, reason = should_open_pr(bundle)
 
     assert should_open is False
-    assert "policyengine-uk" in reason
+    assert "schema v2" in reason
 
 
 def test__given_all_country_bundle__then_opens_policyengine_py_pr() -> None:
     bundle = {
+        "schema_version": 1,
         "bundle_version": "4.14.0",
         "packages": {
             "policyengine-core": {"version": "3.26.1"},
@@ -58,7 +61,7 @@ def test__given_release_archive__then_reads_bundle_manifest(tmp_path: Path) -> N
     bundle_root = tmp_path / f"policyengine-bundle-{version}"
     bundle_root.mkdir()
     (bundle_root / "bundle.json").write_text(
-        json.dumps({"bundle_version": version, "packages": {}})
+        json.dumps({"schema_version": 2, "bundle_version": version, "packages": {}})
     )
     dist_dir.mkdir()
     archive_path = dist_dir / f"policyengine-bundle-{version}.tar.gz"

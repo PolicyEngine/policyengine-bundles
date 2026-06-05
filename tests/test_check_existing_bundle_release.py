@@ -35,19 +35,6 @@ def _load_check_existing_bundle_release() -> ModuleType:
 check_existing_bundle_release = _load_check_existing_bundle_release()
 
 
-def _package_bundle(bundle_dir: Path, dist_dir: Path) -> None:
-    package_bundle_release(bundle_dir, dist_dir)
-
-
-def _add_data_validation_mode(bundle_dir: Path) -> None:
-    report_path = bundle_dir / "validation-report.json"
-    report = json.loads(report_path.read_text())
-    report["metadata"]["data_validation_mode"] = (
-        "release_manifest_and_artifact_metadata"
-    )
-    write_json(report_path, report)
-
-
 def _fake_existing_release(
     monkeypatch: pytest.MonkeyPatch,
     *,
@@ -107,7 +94,7 @@ def _run_script(
     return check_existing_bundle_release.main()
 
 
-def test_check_existing_bundle_release_accepts_legacy_validation_mode(
+def test_check_existing_bundle_release_accepts_matching_release(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -115,12 +102,11 @@ def test_check_existing_bundle_release_accepts_legacy_validation_mode(
     existing_bundle = certified_bundle(tmp_path / "bundle")
     committed_bundle = tmp_path / "committed" / version
     shutil.copytree(existing_bundle, committed_bundle)
-    _add_data_validation_mode(committed_bundle)
 
     existing_dist = tmp_path / "existing-dist"
     committed_dist = tmp_path / "committed-dist"
-    _package_bundle(existing_bundle, existing_dist)
-    _package_bundle(committed_bundle, committed_dist)
+    package_bundle_release(existing_bundle, existing_dist)
+    package_bundle_release(committed_bundle, committed_dist)
     _fake_existing_release(
         monkeypatch,
         version=version,
@@ -146,15 +132,15 @@ def test_check_existing_bundle_release_rejects_real_content_mismatch(
     existing_bundle = certified_bundle(tmp_path / "bundle")
     committed_bundle = tmp_path / "committed" / version
     shutil.copytree(existing_bundle, committed_bundle)
-    constraints_path = committed_bundle / "install/us/py313/constraints.txt"
-    constraints_path.write_text(
-        constraints_path.read_text() + "policyengine-core==3.27.0\n"
-    )
+    country_path = committed_bundle / "countries" / "us.json"
+    country = json.loads(country_path.read_text())
+    country["datasets"]["enhanced_cps_2024"]["size_bytes"] = 13
+    write_json(country_path, country)
 
     existing_dist = tmp_path / "existing-dist"
     committed_dist = tmp_path / "committed-dist"
-    _package_bundle(existing_bundle, existing_dist)
-    _package_bundle(committed_bundle, committed_dist)
+    package_bundle_release(existing_bundle, existing_dist)
+    package_bundle_release(committed_bundle, committed_dist)
     _fake_existing_release(
         monkeypatch,
         version=version,
