@@ -1,17 +1,38 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import shutil
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 from conftest import write_json
 from test_package_bundle_release import certified_bundle
 
-import scripts.check_existing_bundle_release as check_existing_bundle_release
 from policyengine_bundles.release import package_bundle_release, release_asset_names
+
+
+def _load_check_existing_bundle_release() -> ModuleType:
+    script_path = (
+        Path(__file__).resolve().parents[1]
+        / "scripts"
+        / "check_existing_bundle_release.py"
+    )
+    spec = importlib.util.spec_from_file_location(
+        "check_existing_bundle_release",
+        script_path,
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load {script_path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+check_existing_bundle_release = _load_check_existing_bundle_release()
 
 
 def _package_bundle(bundle_dir: Path, dist_dir: Path) -> None:
