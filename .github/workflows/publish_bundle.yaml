@@ -91,7 +91,14 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: python scripts/publish_bundle_release_assets.py "$BUNDLE_VERSION" --dist-dir .tmp/dist --target-sha "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY"
 
+      - name: Check policyengine.py consuming PR support
+        id: policyengine-py-consumer
+        env:
+          BUNDLE_VERSION: ${{ steps.bundle.outputs.bundle_version }}
+        run: python scripts/should_open_policyengine_py_consuming_pr.py "$BUNDLE_VERSION" --dist-dir .tmp/dist
+
       - uses: actions/checkout@v4
+        if: ${{ steps.policyengine-py-consumer.outputs.should_open == 'true' }}
         with:
           repository: ${{ env.POLICYENGINE_PY_REPO }}
           ref: ${{ env.POLICYENGINE_PY_BASE_BRANCH }}
@@ -99,6 +106,7 @@ jobs:
           path: policyengine.py
 
       - name: Open policyengine.py consuming PR
+        if: ${{ steps.policyengine-py-consumer.outputs.should_open == 'true' }}
         env:
           BUNDLE_VERSION: ${{ steps.bundle.outputs.bundle_version }}
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
