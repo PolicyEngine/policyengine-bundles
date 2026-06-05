@@ -16,7 +16,7 @@ def main() -> int:
         "--skip-data-verification",
         action="store_true",
         help=(
-            "Skip release manifest and data artifact hash/reachability checks. "
+            "Skip release manifest integrity and artifact metadata checks. "
             "The generated report is partial and is not certification evidence."
         ),
     )

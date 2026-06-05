@@ -3,17 +3,19 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
 from conftest import fake_resolver, release_manifest, write_candidate, write_json
 
 from policyengine_bundles.bundle_validation import (
-    ArtifactVerification,
+    ContentVerification,
     _household_smoke_code,
     _package_version_check_code,
     validate_bundle,
-    verify_artifact_uri,
+    verify_content_uri,
 )
 from policyengine_bundles.generation import generate_bundle
 from policyengine_bundles.lockfiles import solve_lockfiles
+from policyengine_bundles.models import ValidationReport
 from policyengine_bundles.validation import load_bundle_directory
 
 
@@ -37,10 +39,29 @@ def generated_bundle_with_install_artifacts(tmp_path: Path) -> Path:
     return output_dir
 
 
-def fake_artifact_verifier(uri: str) -> ArtifactVerification:
+def fake_content_verifier(uri: str) -> ContentVerification:
     if uri.startswith("file://"):
-        return verify_artifact_uri(uri)
-    return ArtifactVerification(sha256="c" * 64, size_bytes=12)
+        return verify_content_uri(uri)
+    return ContentVerification(sha256="c" * 64, size_bytes=12)
+
+
+def report_has_failed_check(
+    report: ValidationReport,
+    check_name: str,
+    failure_fragment: str,
+) -> bool:
+    return any(
+        check.name == check_name
+        and check.status == "failed"
+        and (
+            failure_fragment in check.details.get("error", "")
+            or any(
+                failure_fragment in failure
+                for failure in check.details.get("failures", [])
+            )
+        )
+        for check in report.checks
+    )
 
 
 def test_validate_bundle_runs_profile_checks(tmp_path: Path) -> None:
@@ -53,7 +74,7 @@ def test_validate_bundle_runs_profile_checks(tmp_path: Path) -> None:
     report = validate_bundle(
         bundle_dir,
         runner=fake_runner,
-        artifact_verifier=fake_artifact_verifier,
+        content_verifier=fake_content_verifier,
     )
 
     assert report.status == "passed"
@@ -68,8 +89,37 @@ def test_validate_bundle_runs_profile_checks(tmp_path: Path) -> None:
         if check.name in {"constraints_present", "lockfile_present", "create_venv"}
     )
     assert report.metadata["validation_scope"] == "full"
+    assert (
+        report.metadata["data_validation_mode"]
+        == "release_manifest_and_artifact_metadata"
+    )
     assert report.metadata["verify_data"] is True
     assert report.metadata["validate_runtime"] is True
+
+
+def test_validate_bundle_accepts_legacy_artifact_verifier_keyword(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+
+    report = validate_bundle(
+        bundle_dir,
+        runner=lambda command: None,
+        artifact_verifier=fake_content_verifier,
+    )
+
+    assert report.status == "passed"
+
+
+def test_validate_bundle_rejects_multiple_verifier_keywords(tmp_path: Path) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+
+    with pytest.raises(ValueError, match="Pass either content_verifier"):
+        validate_bundle(
+            bundle_dir,
+            content_verifier=fake_content_verifier,
+            artifact_verifier=fake_content_verifier,
+        )
 
 
 def test_validate_bundle_can_emit_explicit_partial_report(tmp_path: Path) -> None:
@@ -92,6 +142,7 @@ def test_validate_bundle_can_emit_explicit_partial_report(tmp_path: Path) -> Non
 
     assert report.status == "skipped"
     assert report.metadata["validation_scope"] == "partial"
+    assert report.metadata["data_validation_mode"] == "skipped"
     assert report.metadata["verify_data"] is False
     assert report.metadata["validate_runtime"] is False
     assert any(
@@ -146,7 +197,7 @@ def test_validate_bundle_reports_runtime_failure(tmp_path: Path) -> None:
     report = validate_bundle(
         bundle_dir,
         runner=failing_runner,
-        artifact_verifier=fake_artifact_verifier,
+        content_verifier=fake_content_verifier,
     )
 
     assert report.status == "failed"
@@ -170,7 +221,7 @@ def test_validate_bundle_fails_without_constraints(tmp_path: Path) -> None:
 
     report = validate_bundle(
         output_dir,
-        artifact_verifier=fake_artifact_verifier,
+        content_verifier=fake_content_verifier,
     )
 
     assert report.status == "failed"
@@ -192,7 +243,7 @@ def test_validate_bundle_fails_when_install_target_missing_for_declared_python(
     report = validate_bundle(
         bundle_dir,
         runner=lambda command: None,
-        artifact_verifier=fake_artifact_verifier,
+        content_verifier=fake_content_verifier,
     )
 
     assert report.status == "failed"
@@ -224,7 +275,7 @@ def test_validate_bundle_fails_when_install_target_not_declared(
     report = validate_bundle(
         bundle_dir,
         runner=lambda command: None,
-        artifact_verifier=fake_artifact_verifier,
+        content_verifier=fake_content_verifier,
     )
 
     assert report.status == "failed"
@@ -259,7 +310,7 @@ def test_validate_bundle_uses_embedded_release_manifest(
     report = validate_bundle(
         output_dir,
         runner=lambda command: None,
-        artifact_verifier=fake_artifact_verifier,
+        content_verifier=fake_content_verifier,
     )
 
     assert report.status == "passed"
@@ -293,7 +344,7 @@ def test_validate_bundle_rejects_missing_embedded_release_manifest(
     report = validate_bundle(
         output_dir,
         runner=lambda command: None,
-        artifact_verifier=fake_artifact_verifier,
+        content_verifier=fake_content_verifier,
     )
 
     assert report.status == "failed"
@@ -331,7 +382,7 @@ def test_validate_bundle_uses_release_manifest_uri_unless_embedded(
     report = validate_bundle(
         output_dir,
         runner=lambda command: None,
-        artifact_verifier=fake_artifact_verifier,
+        content_verifier=fake_content_verifier,
     )
 
     assert report.status == "passed"
@@ -341,26 +392,155 @@ def test_validate_bundle_uses_release_manifest_uri_unless_embedded(
     )
 
 
-def test_validate_bundle_fails_when_artifact_hash_mismatches(
+def test_validate_bundle_does_not_fetch_dataset_artifacts(
     tmp_path: Path,
 ) -> None:
     bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+    calls: list[str] = []
 
-    def bad_artifact_verifier(uri: str) -> ArtifactVerification:
+    def counting_content_verifier(uri: str) -> ContentVerification:
+        calls.append(uri)
         if uri.startswith("file://"):
-            return verify_artifact_uri(uri)
-        return ArtifactVerification(sha256="d" * 64, size_bytes=12)
+            return verify_content_uri(uri)
+        return ContentVerification(sha256="c" * 64, size_bytes=12)
 
     report = validate_bundle(
         bundle_dir,
         runner=lambda command: None,
-        artifact_verifier=bad_artifact_verifier,
+        content_verifier=counting_content_verifier,
+    )
+
+    assert report.status == "passed"
+    assert calls == [(tmp_path / "us-release-manifest.json").as_uri()]
+
+
+def test_validate_bundle_fails_when_release_manifest_hash_mismatches(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+
+    def bad_content_verifier(uri: str) -> ContentVerification:
+        if uri.startswith("file://"):
+            verification = verify_content_uri(uri)
+            return ContentVerification(
+                sha256="d" * 64,
+                size_bytes=verification.size_bytes,
+            )
+        return ContentVerification(sha256="c" * 64, size_bytes=12)
+
+    report = validate_bundle(
+        bundle_dir,
+        runner=lambda command: None,
+        content_verifier=bad_content_verifier,
     )
 
     assert report.status == "failed"
     assert any(
-        check.name == "data_release_manifest_contract" and check.status == "failed"
+        check.name == "data_release_manifest_contract"
+        and check.status == "failed"
+        and any(
+            "release manifest sha256 mismatch" in failure
+            for failure in check.details["failures"]
+        )
         for check in report.checks
+    )
+
+
+def test_validate_bundle_reports_missing_artifact_identity(tmp_path: Path) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+    country_path = bundle_dir / "countries" / "us.json"
+    payload = json.loads(country_path.read_text())
+    artifact = payload["datasets"]["enhanced_cps_2024"]
+    artifact.pop("uri", None)
+    artifact.pop("path", None)
+    artifact.pop("repo_id", None)
+    artifact.pop("revision", None)
+    write_json(country_path, payload)
+
+    report = validate_bundle(
+        bundle_dir,
+        runner=lambda command: None,
+        content_verifier=fake_content_verifier,
+    )
+
+    assert report.status == "failed"
+    assert report_has_failed_check(
+        report,
+        "bundle_directory_contract",
+        "Data artifacts require uri",
+    )
+    assert report.metadata["data_validation_mode"] == "not_run_bundle_load_failed"
+
+
+def test_validate_bundle_reports_empty_artifact_identity(tmp_path: Path) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+    country_path = bundle_dir / "countries" / "us.json"
+    payload = json.loads(country_path.read_text())
+    artifact = payload["datasets"]["enhanced_cps_2024"]
+    artifact["uri"] = ""
+    artifact.pop("path", None)
+    artifact.pop("repo_id", None)
+    artifact.pop("revision", None)
+    write_json(country_path, payload)
+
+    report = validate_bundle(
+        bundle_dir,
+        runner=lambda command: None,
+        content_verifier=fake_content_verifier,
+    )
+
+    assert report.status == "failed"
+    assert report_has_failed_check(
+        report,
+        "data_release_manifest_contract",
+        "enhanced_cps_2024 missing artifact URI",
+    )
+
+
+def test_validate_bundle_reports_certified_artifact_without_sha256(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+    country_path = bundle_dir / "countries" / "us.json"
+    payload = json.loads(country_path.read_text())
+    payload["datasets"]["enhanced_cps_2024"].pop("sha256")
+    write_json(country_path, payload)
+
+    report = validate_bundle(
+        bundle_dir,
+        runner=lambda command: None,
+        content_verifier=fake_content_verifier,
+    )
+
+    assert report.status == "failed"
+    assert report_has_failed_check(
+        report,
+        "bundle_directory_contract",
+        "Certified data artifacts require sha256",
+    )
+    assert report.metadata["data_validation_mode"] == "not_run_bundle_load_failed"
+
+
+def test_validate_bundle_reports_empty_certified_artifact_sha256(
+    tmp_path: Path,
+) -> None:
+    bundle_dir = generated_bundle_with_install_artifacts(tmp_path)
+    country_path = bundle_dir / "countries" / "us.json"
+    payload = json.loads(country_path.read_text())
+    payload["datasets"]["enhanced_cps_2024"]["sha256"] = ""
+    write_json(country_path, payload)
+
+    report = validate_bundle(
+        bundle_dir,
+        runner=lambda command: None,
+        content_verifier=fake_content_verifier,
+    )
+
+    assert report.status == "failed"
+    assert report_has_failed_check(
+        report,
+        "data_release_manifest_contract",
+        "enhanced_cps_2024 missing sha256",
     )
 
 
@@ -371,7 +551,7 @@ def test_validate_bundle_fails_when_lockfile_missing(tmp_path: Path) -> None:
     report = validate_bundle(
         bundle_dir,
         runner=lambda command: None,
-        artifact_verifier=fake_artifact_verifier,
+        content_verifier=fake_content_verifier,
     )
 
     assert report.status == "failed"
@@ -388,7 +568,7 @@ def test_validate_bundle_fails_when_lockfile_is_not_toml(tmp_path: Path) -> None
     report = validate_bundle(
         bundle_dir,
         runner=lambda command: None,
-        artifact_verifier=fake_artifact_verifier,
+        content_verifier=fake_content_verifier,
     )
 
     assert report.status == "failed"

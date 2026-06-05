@@ -316,22 +316,26 @@ schema because they make install resolution ambiguous.
 python scripts/validate_bundle.py bundles/4.4.0
 ```
 
-Validation checks that certified data artifacts are reachable and match their
-declared hashes, creates clean profile environments from the generated
-constraints, verifies direct package versions, imports the profile packages, and
-runs country household smoke checks where supported for every profile and every
-declared install target. If `policyengine` is a pre-release bundle carrier and
-is excluded from the runtime install, the smoke checks use the installed country
-packages directly. The resulting
-`validation-report.json` is part of the bundle contract.
+Validation verifies the release manifest hash, checks that recorded dataset
+artifact identity and required hash metadata are complete, creates clean profile
+environments from the generated constraints, verifies direct package versions,
+imports the profile packages, and runs country household smoke checks where
+supported for every profile and every declared install target. Bundle validation
+does not download and re-hash every dataset artifact; data package release
+processes are responsible for producing those artifact hashes, and bundles
+preserve that evidence. If `policyengine` is a pre-release bundle carrier and is
+excluded from the runtime install, the smoke checks use the installed country
+packages directly. The resulting `validation-report.json` is part of the bundle
+contract.
 Runtime validation records the current runner platform in check details, but
 platform-specific lockfiles are intentionally out of scope for this contract.
 For embedded release manifests, validation hashes the embedded file from the
 bundle directory. Missing embedded manifests fail validation instead of falling
 back to the original source URI recorded for provenance.
 
-The validator defaults to full certification checks. Test fixtures or
-historical demonstration bundles can opt into an explicitly partial report:
+The validator defaults to complete bundle-level checks under this lightweight
+contract. Test fixtures or historical demonstration bundles can opt into an
+explicitly partial report:
 
 ```bash
 python scripts/validate_bundle.py \
@@ -340,9 +344,9 @@ python scripts/validate_bundle.py \
   examples/bundles/example
 ```
 
-Partial reports mark the skipped checks and set
-`metadata.validation_scope` to `partial`. They are useful for schema fixtures,
-but they are not evidence that a bundle is reproducible.
+Partial reports mark the skipped checks and set `metadata.validation_scope` to
+`partial`. They are useful for schema fixtures, but they are not evidence that a
+bundle is reproducible.
 
 CI regenerates the current certified bundle from the committed candidate spec
 and compares it with the checked-in bundle using normalized output. The
@@ -387,6 +391,8 @@ A bundle release should not be published unless:
 - country model packages are exact-pinned;
 - data artifact URIs are immutable/versioned;
 - certified data artifacts include SHA256 hashes;
-- country data release manifests are reachable;
+- country data release manifests can be loaded and match recorded hashes;
+- dataset artifacts record complete identity metadata;
+- certified, partially certified, and hash-pinned artifacts record hash metadata;
 - profile install targets solve for supported Python versions;
 - integrated validation passes for each profile.
