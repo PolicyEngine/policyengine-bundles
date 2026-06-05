@@ -11,6 +11,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from policyengine_bundles.http import request_with_retries
 from policyengine_bundles.io import JsonDict, load_json, write_bytes, write_json
 from policyengine_bundles.models import (
     ArtifactRelease,
@@ -153,12 +154,15 @@ def load_release_manifest_uri(uri: str) -> LoadedManifest:
 
 
 def _read_hf_bytes(reference: HuggingFaceReference) -> bytes:
-    request = urllib.request.Request(reference.download_url())
-    token = hugging_face_token()
-    if token:
-        request.add_header("Authorization", f"Bearer {token}")
-    with urllib.request.urlopen(request, timeout=60) as response:
-        return response.read()
+    def read_once() -> bytes:
+        request = urllib.request.Request(reference.download_url())
+        token = hugging_face_token()
+        if token:
+            request.add_header("Authorization", f"Bearer {token}")
+        with urllib.request.urlopen(request, timeout=60) as response:
+            return response.read()
+
+    return request_with_retries(read_once)
 
 
 def generate_bundle(

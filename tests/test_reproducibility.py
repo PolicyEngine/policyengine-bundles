@@ -114,3 +114,28 @@ def test_compare_bundle_directories_reports_lockfile_content_mismatch(
 
     assert len(mismatches) == 1
     assert "install/all/py313/pylock.toml differs" in mismatches[0]
+
+
+def test_compare_bundle_directories_treats_legacy_validation_mode_as_default(
+    tmp_path: Path,
+) -> None:
+    expected = tmp_path / "expected"
+    actual = tmp_path / "actual"
+    seed_bundle(expected)
+    seed_bundle(actual)
+
+    expected_manifest = json.loads((expected / "bundle.json").read_text())
+    expected_manifest["bundle_digest"] = "sha256:" + "1" * 64
+    write_json(expected / "bundle.json", expected_manifest)
+
+    actual_manifest = json.loads((actual / "bundle.json").read_text())
+    actual_manifest["bundle_digest"] = "sha256:" + "2" * 64
+    write_json(actual / "bundle.json", actual_manifest)
+
+    report_payload = json.loads((actual / "validation-report.json").read_text())
+    report_payload["metadata"]["data_validation_mode"] = (
+        "release_manifest_and_artifact_metadata"
+    )
+    write_json(actual / "validation-report.json", report_payload)
+
+    assert compare_bundle_directories(expected, actual) == []

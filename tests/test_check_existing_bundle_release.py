@@ -1,0 +1,181 @@
+from __future__ import annotations
+
+import json
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+from conftest import write_json
+from test_package_bundle_release import certified_bundle
+
+import scripts.check_existing_bundle_release as check_existing_bundle_release
+from policyengine_bundles.release import package_bundle_release, release_asset_names
+
+
+def _package_bundle(bundle_dir: Path, dist_dir: Path) -> None:
+    package_bundle_release(bundle_dir, dist_dir)
+
+
+def _add_data_validation_mode(bundle_dir: Path) -> None:
+    report_path = bundle_dir / "validation-report.json"
+    report = json.loads(report_path.read_text())
+    report["metadata"]["data_validation_mode"] = (
+        "release_manifest_and_artifact_metadata"
+    )
+    write_json(report_path, report)
+
+
+def _fake_existing_release(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    version: str,
+    existing_dist: Path,
+) -> None:
+    def fake_run(command: list[str]) -> subprocess.CompletedProcess[str]:
+        if command[:3] == ["gh", "release", "view"]:
+            return subprocess.CompletedProcess(command, 0, "", "")
+        if command[:3] == ["gh", "release", "download"]:
+            asset_name = command[command.index("--pattern") + 1]
+            output_dir = Path(command[command.index("--dir") + 1])
+            assert asset_name in release_asset_names(version)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            shutil.copy(existing_dist / asset_name, output_dir / asset_name)
+            return subprocess.CompletedProcess(command, 0, "", "")
+        raise AssertionError(f"Unexpected command: {command}")
+
+    monkeypatch.setattr(check_existing_bundle_release, "run", fake_run)
+
+
+def _fake_release_view_failure(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    stderr: str,
+) -> None:
+    def fake_run(command: list[str]) -> subprocess.CompletedProcess[str]:
+        if command[:3] == ["gh", "release", "view"]:
+            return subprocess.CompletedProcess(command, 1, "", stderr)
+        raise AssertionError(f"Unexpected command: {command}")
+
+    monkeypatch.setattr(check_existing_bundle_release, "run", fake_run)
+
+
+def _run_script(
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    tmp_path: Path,
+    version: str,
+    dist_dir: Path,
+) -> int:
+    monkeypatch.setattr(
+        sys,
+        "argv",
+        [
+            "check_existing_bundle_release.py",
+            "--bundle-version",
+            version,
+            "--dist-dir",
+            str(dist_dir),
+            "--repo",
+            "PolicyEngine/policyengine-bundles",
+            "--existing-release-dir",
+            str(tmp_path / "existing-release"),
+        ],
+    )
+    return check_existing_bundle_release.main()
+
+
+def test_check_existing_bundle_release_accepts_legacy_validation_mode(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    version = "4.4.0"
+    existing_bundle = certified_bundle(tmp_path / "bundle")
+    committed_bundle = tmp_path / "committed" / version
+    shutil.copytree(existing_bundle, committed_bundle)
+    _add_data_validation_mode(committed_bundle)
+
+    existing_dist = tmp_path / "existing-dist"
+    committed_dist = tmp_path / "committed-dist"
+    _package_bundle(existing_bundle, existing_dist)
+    _package_bundle(committed_bundle, committed_dist)
+    _fake_existing_release(
+        monkeypatch,
+        version=version,
+        existing_dist=existing_dist,
+    )
+
+    assert (
+        _run_script(
+            monkeypatch,
+            tmp_path=tmp_path,
+            version=version,
+            dist_dir=committed_dist,
+        )
+        == 0
+    )
+
+
+def test_check_existing_bundle_release_rejects_real_content_mismatch(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    version = "4.4.0"
+    existing_bundle = certified_bundle(tmp_path / "bundle")
+    committed_bundle = tmp_path / "committed" / version
+    shutil.copytree(existing_bundle, committed_bundle)
+    constraints_path = committed_bundle / "install/us/py313/constraints.txt"
+    constraints_path.write_text(
+        constraints_path.read_text() + "policyengine-core==3.27.0\n"
+    )
+
+    existing_dist = tmp_path / "existing-dist"
+    committed_dist = tmp_path / "committed-dist"
+    _package_bundle(existing_bundle, existing_dist)
+    _package_bundle(committed_bundle, committed_dist)
+    _fake_existing_release(
+        monkeypatch,
+        version=version,
+        existing_dist=existing_dist,
+    )
+
+    with pytest.raises(SystemExit, match="does not match committed bundle"):
+        _run_script(
+            monkeypatch,
+            tmp_path=tmp_path,
+            version=version,
+            dist_dir=committed_dist,
+        )
+
+
+def test_check_existing_bundle_release_accepts_missing_release(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _fake_release_view_failure(monkeypatch, stderr="release not found")
+
+    assert (
+        _run_script(
+            monkeypatch,
+            tmp_path=tmp_path,
+            version="4.4.0",
+            dist_dir=tmp_path / "dist",
+        )
+        == 0
+    )
+
+
+def test_check_existing_bundle_release_rejects_ambiguous_view_error(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _fake_release_view_failure(monkeypatch, stderr="HTTP 401: Bad credentials")
+
+    with pytest.raises(RuntimeError, match="Bad credentials"):
+        _run_script(
+            monkeypatch,
+            tmp_path=tmp_path,
+            version="4.4.0",
+            dist_dir=tmp_path / "dist",
+        )

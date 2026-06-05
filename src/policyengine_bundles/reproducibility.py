@@ -85,12 +85,25 @@ def _normalized_file_content(root: Path, relative_path: Path) -> str:
 def _normalize_bundle_manifest(payload: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(payload)
     normalized.pop("created_at", None)
+    normalized.pop("bundle_digest", None)
     return normalized
 
 
 def _normalize_validation_report(payload: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(payload)
     normalized.pop("generated_at", None)
+    metadata = normalized.get("metadata")
+    if isinstance(metadata, dict):
+        metadata_payload = dict(metadata)
+        if (
+            metadata_payload.get("validation_scope") == "full"
+            and metadata_payload.get("verify_data") is True
+            and "data_validation_mode" not in metadata_payload
+        ):
+            metadata_payload["data_validation_mode"] = (
+                "release_manifest_and_artifact_metadata"
+            )
+        normalized["metadata"] = metadata_payload
     checks = []
     for check in normalized.get("checks", []):
         check_payload = dict(check)

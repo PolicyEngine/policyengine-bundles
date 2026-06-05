@@ -242,6 +242,10 @@ def _release_asset_names(version: str) -> tuple[str, str, str]:
     return archive_name, f"{archive_name}.sha256", f"policyengine-bundle-{version}.json"
 
 
+def release_asset_names(version: str) -> tuple[str, str, str]:
+    return _release_asset_names(version)
+
+
 def _download_asset(*, url: str, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with urllib.request.urlopen(url) as response:

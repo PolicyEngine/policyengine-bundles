@@ -14,6 +14,7 @@ from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
 from typing import Any
 
+from policyengine_bundles.http import request_with_retries
 from policyengine_bundles.io import load_json, write_json
 from policyengine_bundles.lockfiles import CommandRunner, run_command
 from policyengine_bundles.models import (
@@ -839,14 +840,20 @@ def _hash_file(path: Path) -> ContentVerification:
 
 
 def _hash_url(url: str) -> ContentVerification:
-    digest = hashlib.sha256()
-    size_bytes = 0
-    request = urllib.request.Request(url)
-    token = hugging_face_token()
-    if token and "huggingface.co" in urllib.parse.urlparse(url).netloc:
-        request.add_header("Authorization", f"Bearer {token}")
-    with urllib.request.urlopen(request, timeout=300) as response:
-        while chunk := response.read(1024 * 1024):
-            digest.update(chunk)
-            size_bytes += len(chunk)
-    return ContentVerification(sha256=digest.hexdigest(), size_bytes=size_bytes)
+    def hash_once() -> ContentVerification:
+        digest = hashlib.sha256()
+        size_bytes = 0
+        request = urllib.request.Request(url)
+        token = hugging_face_token()
+        if token and "huggingface.co" in urllib.parse.urlparse(url).netloc:
+            request.add_header("Authorization", f"Bearer {token}")
+        with urllib.request.urlopen(request, timeout=300) as response:
+            while chunk := response.read(1024 * 1024):
+                digest.update(chunk)
+                size_bytes += len(chunk)
+        return ContentVerification(
+            sha256=digest.hexdigest(),
+            size_bytes=size_bytes,
+        )
+
+    return request_with_retries(hash_once)
