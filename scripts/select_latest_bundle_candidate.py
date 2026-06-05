@@ -21,7 +21,7 @@ def write_output(name: str, value: str) -> None:
 
 def main() -> int:
     candidates = []
-    for path in Path("candidates").glob("*-all.json"):
+    for path in Path("candidates").glob("*.json"):
         payload = json.loads(path.read_text())
         version = payload["bundle_version"]
         candidates.append((version_key(version), version, path))
