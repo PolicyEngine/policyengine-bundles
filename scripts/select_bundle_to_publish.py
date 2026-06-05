@@ -42,7 +42,7 @@ def changed_paths(before: str, after: str) -> list[str]:
 
 def latest_candidate_version() -> str:
     candidates = []
-    for path in Path("candidates").glob("*-all.json"):
+    for path in Path("candidates").glob("*.json"):
         payload = json.loads(path.read_text())
         version = payload["bundle_version"]
         candidates.append((version_key(version), version))
@@ -57,12 +57,11 @@ def changed_bundle_versions(paths: list[str]) -> set[str]:
         parts = Path(changed_path).parts
         if len(parts) >= 2 and parts[0] == "bundles":
             versions.add(parts[1])
-        if (
-            len(parts) >= 2
-            and parts[0] == "candidates"
-            and parts[1].endswith("-all.json")
-        ):
-            versions.add(parts[1][: -len("-all.json")])
+        if len(parts) >= 2 and parts[0] == "candidates" and parts[1].endswith(".json"):
+            path = Path(changed_path)
+            if path.exists():
+                payload = json.loads(path.read_text())
+                versions.add(payload["bundle_version"])
     return versions
 
 
@@ -93,7 +92,7 @@ def main() -> int:
         )
 
     version = ordered_versions[0]
-    candidate_path = Path("candidates") / f"{version}-all.json"
+    candidate_path = candidate_path_for_version(version)
     committed_bundle = Path("bundles") / version
     if not candidate_path.exists():
         raise SystemExit(f"Committed candidate missing: {candidate_path}")
@@ -105,6 +104,22 @@ def main() -> int:
     write_output("generated_bundle", f".tmp/generated-bundles/{version}")
     write_output("committed_bundle", committed_bundle.as_posix())
     return 0
+
+
+def candidate_path_for_version(version: str) -> Path:
+    matches = []
+    for path in Path("candidates").glob("*.json"):
+        payload = json.loads(path.read_text())
+        if payload["bundle_version"] == version:
+            matches.append(path)
+    if not matches:
+        raise SystemExit(f"Committed candidate missing for bundle {version}.")
+    if len(matches) > 1:
+        raise SystemExit(
+            "Expected exactly one candidate for bundle "
+            f"{version}; got {', '.join(path.as_posix() for path in matches)}."
+        )
+    return matches[0]
 
 
 if __name__ == "__main__":

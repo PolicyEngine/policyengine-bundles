@@ -1,0 +1,121 @@
+{
+  "bundle_version": "4.14.0",
+  "checks": [
+    {
+      "country": "us",
+      "details": {},
+      "name": "data_release_manifest_contract",
+      "profile": "us",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "declared_python_versions": [
+          "3.13"
+        ],
+        "install_targets": [
+          "py313"
+        ]
+      },
+      "name": "install_targets_complete",
+      "profile": "us",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/us/py313/pylock.toml",
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "name": "lockfile_present",
+      "profile": "us",
+      "python_version": "3.13",
+      "status": "passed"
+    },
+    {
+      "details": {
+        "path": "install/us/py313/constraints.txt",
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "name": "constraints_present",
+      "profile": "us",
+      "python_version": "3.13",
+      "status": "passed"
+    },
+    {
+      "command": "uv venv --python 3.13 /var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpmw6mu321/venv",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-06-05T16:00:52Z",
+      "name": "create_venv",
+      "profile": "us",
+      "python_version": "3.13",
+      "started_at": "2026-06-05T16:00:52Z",
+      "status": "passed"
+    },
+    {
+      "command": "uv pip install --python /var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpmw6mu321/venv/bin/python -r bundles/4.14.0/install/us/py313/constraints.txt",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-06-05T16:00:55Z",
+      "name": "install_constraints",
+      "profile": "us",
+      "python_version": "3.13",
+      "started_at": "2026-06-05T16:00:52Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpmw6mu321/venv/bin/python -c import importlib.metadata as md\nexpected = {\"policyengine-core\": \"3.26.1\", \"policyengine-us\": \"1.715.3\"}\nfor name, version in expected.items():\n    actual = md.version(name)\n    assert actual == version, f'{name}: expected {version}, got {actual}'\n",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-06-05T16:00:55Z",
+      "name": "verify_direct_package_versions",
+      "profile": "us",
+      "python_version": "3.13",
+      "started_at": "2026-06-05T16:00:55Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpmw6mu321/venv/bin/python -c import policyengine_core\nimport policyengine_us\n",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-06-05T16:01:18Z",
+      "name": "import_smoke",
+      "profile": "us",
+      "python_version": "3.13",
+      "started_at": "2026-06-05T16:00:55Z",
+      "status": "passed"
+    },
+    {
+      "command": "/var/folders/9l/_wztzgbx7mgc7l1r0416cy7m0000gn/T/tmpmw6mu321/venv/bin/python -c from policyengine_us import Simulation\nsimulation = Simulation(situation={'people': {'person': {'age': {'2026': 35}, 'employment_income': {'2026': 1_000}}}, 'households': {'household': {'members': ['person'], 'state_code': {'2026': 'CA'}}}, 'tax_units': {'tax_unit': {'members': ['person'], 'filing_status': {'2026': 'SINGLE'}}}, 'spm_units': {'spm_unit': {'members': ['person']}}, 'families': {'family': {'members': ['person']}}, 'marital_units': {'marital_unit': {'members': ['person']}}, })\nsimulation.calculate('age', '2026')\n",
+      "details": {
+        "target": "py313",
+        "validated_on_platform": "macos"
+      },
+      "ended_at": "2026-06-05T16:01:25Z",
+      "name": "us_household_smoke",
+      "profile": "us",
+      "python_version": "3.13",
+      "started_at": "2026-06-05T16:01:18Z",
+      "status": "passed"
+    }
+  ],
+  "generated_at": "2026-06-05T16:01:27Z",
+  "metadata": {
+    "generated_by": "scripts/validate_bundle.py",
+    "validate_runtime": true,
+    "validation_scope": "full",
+    "verify_data": true
+  },
+  "schema_version": 1,
+  "status": "passed"
+}
