@@ -111,6 +111,7 @@
   ],
   "generated_at": "2026-06-05T16:01:27Z",
   "metadata": {
+    "data_validation_mode": "release_manifest_and_artifact_metadata",
     "generated_by": "scripts/validate_bundle.py",
     "validate_runtime": true,
     "validation_scope": "full",
