@@ -12,8 +12,9 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from tempfile import TemporaryDirectory
+from typing import Any
 
-from policyengine_bundles.io import write_json
+from policyengine_bundles.io import load_json, write_json
 from policyengine_bundles.lockfiles import CommandRunner, run_command
 from policyengine_bundles.models import (
     CountryBundle,
@@ -39,12 +40,12 @@ IMPORT_NAMES = {
 
 
 @dataclass(frozen=True)
-class ArtifactVerification:
+class ContentVerification:
     sha256: str
     size_bytes: int
 
 
-ArtifactVerifier = Callable[[str], ArtifactVerification]
+ContentVerifier = Callable[[str], ContentVerification]
 
 
 @dataclass(frozen=True)
@@ -58,20 +59,38 @@ def validate_bundle(
     bundle_dir: Path | str,
     *,
     runner: CommandRunner = run_command,
-    artifact_verifier: ArtifactVerifier | None = None,
+    content_verifier: ContentVerifier | None = None,
+    artifact_verifier: ContentVerifier | None = None,
     verify_data: bool = True,
     validate_runtime: bool = True,
 ) -> ValidationReport:
-    bundle = load_bundle_directory(bundle_dir)
+    if content_verifier is not None and artifact_verifier is not None:
+        raise ValueError("Pass either content_verifier or artifact_verifier, not both.")
+    root = Path(bundle_dir)
+    try:
+        bundle = load_bundle_directory(root)
+    except Exception as exc:
+        report, report_path = _bundle_load_failure_report(
+            root,
+            exc,
+            verify_data=verify_data,
+            validate_runtime=validate_runtime,
+        )
+        if root.exists() and root.is_dir():
+            write_json(report_path, report.model_dump(exclude_none=True))
+        return report
+
     selected_profiles = list(bundle.manifest.profiles)
-    resolved_artifact_verifier = artifact_verifier or verify_artifact_uri
+    resolved_content_verifier = (
+        content_verifier or artifact_verifier or verify_content_uri
+    )
     checks: list[ValidationCheck] = []
     if verify_data:
         checks.extend(
             _validate_data_contracts(
                 bundle=bundle,
                 profiles=selected_profiles,
-                artifact_verifier=resolved_artifact_verifier,
+                content_verifier=resolved_content_verifier,
             )
         )
     else:
@@ -126,6 +145,9 @@ def validate_bundle(
             "validation_scope": (
                 "full" if verify_data and validate_runtime else "partial"
             ),
+            "data_validation_mode": (
+                "release_manifest_and_artifact_metadata" if verify_data else "skipped"
+            ),
             "verify_data": verify_data,
             "validate_runtime": validate_runtime,
         },
@@ -136,6 +158,83 @@ def validate_bundle(
     )
     load_bundle_directory(bundle.root)
     return report
+
+
+def _bundle_load_failure_report(
+    root: Path,
+    error: Exception,
+    *,
+    verify_data: bool,
+    validate_runtime: bool,
+) -> tuple[ValidationReport, Path]:
+    bundle_version, report_path, context = _bundle_failure_context(root)
+    checks = [
+        ValidationCheck(
+            name="bundle_directory_contract",
+            status="failed",
+            details={
+                **context,
+                "error_type": type(error).__name__,
+                "error": str(error),
+            },
+        )
+    ]
+    report = ValidationReport(
+        schema_version=1,
+        bundle_version=bundle_version,
+        generated_at=_now_timestamp(),
+        status="failed",
+        checks=checks,
+        metadata={
+            "generated_by": "scripts/validate_bundle.py",
+            "validation_scope": "partial",
+            "data_validation_mode": "not_run_bundle_load_failed",
+            "verify_data": verify_data,
+            "validate_runtime": validate_runtime,
+        },
+    )
+    return report, report_path
+
+
+def _bundle_failure_context(root: Path) -> tuple[str, Path, dict[str, Any]]:
+    bundle_version = "unknown"
+    report_path = root / "validation-report.json"
+    context: dict[str, Any] = {"bundle_dir": str(root)}
+    try:
+        payload = load_json(root / "bundle.json")
+    except Exception as exc:
+        context["bundle_json_error"] = f"{type(exc).__name__}: {exc}"
+        return bundle_version, report_path, context
+
+    if not isinstance(payload, dict):
+        context["bundle_json_error"] = "bundle.json must contain a JSON object."
+        return bundle_version, report_path, context
+
+    raw_bundle_version = payload.get("bundle_version")
+    if isinstance(raw_bundle_version, str) and raw_bundle_version:
+        bundle_version = raw_bundle_version
+    else:
+        context["bundle_version_error"] = "bundle.json missing string bundle_version."
+
+    raw_report_path = payload.get("validation_report")
+    if isinstance(raw_report_path, str):
+        parsed = PurePosixPath(raw_report_path)
+        if (
+            not parsed.is_absolute()
+            and ".." not in parsed.parts
+            and raw_report_path not in {"", "."}
+        ):
+            report_path = root.joinpath(*parsed.parts)
+        else:
+            context["validation_report_path_error"] = (
+                "bundle.json validation_report must be a bundle-relative POSIX path."
+            )
+    else:
+        context["validation_report_path_error"] = (
+            "bundle.json missing string validation_report."
+        )
+
+    return bundle_version, report_path, context
 
 
 def current_python_platform() -> str:
@@ -229,7 +328,7 @@ def _runtime_install_target(target: InstallTarget) -> RuntimeInstallTarget:
 def _validate_data_contracts(
     bundle: BundleDirectory,
     profiles: Sequence[str],
-    artifact_verifier: ArtifactVerifier,
+    content_verifier: ContentVerifier,
 ) -> list[ValidationCheck]:
     checks: list[ValidationCheck] = []
     for profile_name in profiles:
@@ -244,37 +343,16 @@ def _validate_data_contracts(
             _verify_release_manifest(
                 bundle=bundle,
                 country=country,
-                artifact_verifier=artifact_verifier,
+                content_verifier=content_verifier,
                 failures=failures,
             )
             for artifact_key, artifact in country.datasets.items():
-                if artifact.status == "certified" and not artifact.sha256:
-                    failures.append(f"{artifact_key} missing sha256")
-                    continue
-                if artifact.status != "certified":
-                    continue
-                artifact_uri = _artifact_uri(country, artifact)
-                if artifact_uri is None:
-                    failures.append(f"{artifact_key} missing artifact URI")
-                    continue
-                try:
-                    verification = artifact_verifier(artifact_uri)
-                except Exception as exc:
-                    failures.append(f"{artifact_key} could not be read: {exc}")
-                    continue
-                if verification.sha256 != artifact.sha256:
-                    failures.append(
-                        f"{artifact_key} sha256 mismatch: expected "
-                        f"{artifact.sha256}, got {verification.sha256}"
-                    )
-                if (
-                    artifact.size_bytes is not None
-                    and verification.size_bytes != artifact.size_bytes
-                ):
-                    failures.append(
-                        f"{artifact_key} size mismatch: expected "
-                        f"{artifact.size_bytes}, got {verification.size_bytes}"
-                    )
+                _validate_artifact_metadata(
+                    country=country,
+                    artifact_key=artifact_key,
+                    artifact=artifact,
+                    failures=failures,
+                )
             checks.append(
                 ValidationCheck(
                     name="data_release_manifest_contract",
@@ -303,7 +381,7 @@ def _skipped_data_contract_checks(
                     country=country_id,
                     details={
                         "reason": (
-                            "Data artifact and release manifest verification "
+                            "Release manifest and artifact metadata validation "
                             "disabled by caller."
                         ),
                     },
@@ -316,7 +394,7 @@ def _verify_release_manifest(
     *,
     bundle: BundleDirectory,
     country: CountryBundle,
-    artifact_verifier: ArtifactVerifier,
+    content_verifier: ContentVerifier,
     failures: list[str],
 ) -> None:
     expected_sha256 = (
@@ -364,7 +442,7 @@ def _verify_release_manifest(
         failures.append(f"{country.country_id} missing release manifest URI")
         return
     try:
-        verification = artifact_verifier(release_manifest_uri)
+        verification = content_verifier(release_manifest_uri)
     except Exception as exc:
         failures.append(
             f"{country.country_id} release manifest could not be read: {exc}"
@@ -375,6 +453,20 @@ def _verify_release_manifest(
             f"{country.country_id} release manifest sha256 mismatch: expected "
             f"{expected_sha256}, got {verification.sha256}"
         )
+
+
+def _validate_artifact_metadata(
+    *,
+    country: CountryBundle,
+    artifact_key: str,
+    artifact: DataArtifact,
+    failures: list[str],
+) -> None:
+    if artifact.status in {"certified", "partially_certified", "hash_pinned"}:
+        if not artifact.sha256:
+            failures.append(f"{artifact_key} missing sha256")
+    if _artifact_uri(country, artifact) is None:
+        failures.append(f"{artifact_key} missing artifact URI")
 
 
 def _bundle_local_release_manifest_path(
@@ -726,7 +818,7 @@ def _is_windows() -> bool:
     return os.name == "nt"
 
 
-def verify_artifact_uri(uri: str) -> ArtifactVerification:
+def verify_content_uri(uri: str) -> ContentVerification:
     parsed = urllib.parse.urlparse(uri)
     if parsed.scheme == "file":
         path = Path(urllib.request.url2pathname(parsed.path))
@@ -736,17 +828,17 @@ def verify_artifact_uri(uri: str) -> ArtifactVerification:
     raise ValueError(f"Unsupported artifact URI scheme: {uri!r}.")
 
 
-def _hash_file(path: Path) -> ArtifactVerification:
+def _hash_file(path: Path) -> ContentVerification:
     digest = hashlib.sha256()
     size_bytes = 0
     with path.open("rb") as file:
         for chunk in iter(lambda: file.read(1024 * 1024), b""):
             digest.update(chunk)
             size_bytes += len(chunk)
-    return ArtifactVerification(sha256=digest.hexdigest(), size_bytes=size_bytes)
+    return ContentVerification(sha256=digest.hexdigest(), size_bytes=size_bytes)
 
 
-def _hash_url(url: str) -> ArtifactVerification:
+def _hash_url(url: str) -> ContentVerification:
     digest = hashlib.sha256()
     size_bytes = 0
     request = urllib.request.Request(url)
@@ -757,4 +849,4 @@ def _hash_url(url: str) -> ArtifactVerification:
         while chunk := response.read(1024 * 1024):
             digest.update(chunk)
             size_bytes += len(chunk)
-    return ArtifactVerification(sha256=digest.hexdigest(), size_bytes=size_bytes)
+    return ContentVerification(sha256=digest.hexdigest(), size_bytes=size_bytes)
