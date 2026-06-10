@@ -48,11 +48,13 @@ def should_open_policyengine_py_consuming_pr(
     bundle: dict[str, Any],
 ) -> tuple[bool, str]:
     bundle_version = bundle.get("bundle_version", "unknown")
-    if bundle.get("schema_version") != 1:
+    schema_version = bundle.get("schema_version")
+    if schema_version != 2:
         return (
             False,
             f"Skipping policyengine.py consuming PR for bundle {bundle_version}: "
-            "automated importer does not yet support bundle schema v2.",
+            "automated importer supports bundle schema v2 only; "
+            f"got schema_version={schema_version!r}.",
         )
 
     packages = bundle.get("packages")

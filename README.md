@@ -103,9 +103,8 @@ Publication steps:
 4. Package immutable release assets.
 5. If the GitHub release already exists, verify the generated assets match it.
 6. If it does not exist, publish the release assets.
-
-The workflow currently skips automatic `policyengine.py` consuming PRs for schema
-v2 bundles until the importer in `policyengine.py` supports the v2 format.
+7. Open a `policyengine.py` consuming PR for bundles that include both UK and
+   US country packages.
 
 ## Schemas
 
