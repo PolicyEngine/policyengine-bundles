@@ -259,6 +259,55 @@ class DataReleaseManifest(BundleModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class CandidateRuntimeCertification(BundleModel):
+    basis: Literal["manual_runtime_certification"] = "manual_runtime_certification"
+    certified_by: str = Field(min_length=1)
+    reason: str = Field(min_length=1)
+    evidence: list[CertificationEvidence] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class LegacyCandidateCountry(BundleModel):
+    model_package: str
+    data_release_manifest_uri: str
+    certification: CandidateRuntimeCertification | None = None
+
+
+class LegacyBundleCandidate(BundleModel):
+    schema_version: Literal[1]
+    bundle_version: str
+    policyengine_version: str
+    python_versions: list[str] = Field(min_length=1)
+    profiles: list[str] = Field(min_length=1)
+    packages: dict[str, str]
+    countries: dict[str, LegacyCandidateCountry]
+
+    @model_validator(mode="after")
+    def validate_candidate(self) -> LegacyBundleCandidate:
+        if self.policyengine_version != self.bundle_version:
+            raise ValueError(
+                "Legacy candidate policyengine_version must match bundle_version."
+            )
+        if "policyengine-core" not in self.packages:
+            raise ValueError(
+                "Legacy candidate packages must include policyengine-core."
+            )
+        if not self.countries:
+            raise ValueError("Legacy candidate must include at least one country.")
+        for country_id, country in self.countries.items():
+            if country.model_package not in self.packages:
+                raise ValueError(
+                    f"Legacy country {country_id!r} references unknown model "
+                    f"package {country.model_package!r}."
+                )
+        for profile in self.profiles:
+            if profile != "all" and profile not in self.countries:
+                raise ValueError(
+                    f"Legacy profile {profile!r} must be 'all' or a country id."
+                )
+        return self
+
+
 class CandidateCountry(BundleModel):
     model_package: str
     data_release_manifest_uri: str
@@ -301,6 +350,69 @@ class RegionDataset(BundleModel):
     uri_template: str | None = None
 
 
+class LegacyInstallTarget(BundleModel):
+    python_version: str
+    constraints: str
+    lockfile: str
+    resolver: str = "uv"
+
+    @model_validator(mode="after")
+    def validate_bundle_paths(self) -> LegacyInstallTarget:
+        _validate_relative_posix_path(self.constraints, "constraints")
+        _validate_relative_posix_path(self.lockfile, "lockfile")
+        return self
+
+
+class LegacyCountryCertification(BundleModel):
+    compatibility_basis: str
+    built_with_model_package: PackagePin
+    built_with_core_package: PackagePin
+    certified_for_model_package: PackagePin
+    certified_for_core_package: PackagePin
+    certified_by: str
+    data_build_id: str | None = None
+    data_build_fingerprint: str | None = None
+    runtime_model_package: RuntimeComponentMetadata | None = None
+    runtime_core_package: RuntimeComponentMetadata | PackagePin | None = None
+    evidence: list[CertificationEvidence] = Field(default_factory=list)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class LegacyCountryBundle(BundleModel):
+    schema_version: Literal[1]
+    bundle_version: str
+    country_id: str
+    model_package: PackagePin
+    core_package: PackagePin
+    data_package: DataPackageReference
+    artifact_release: ArtifactRelease | None = None
+    default_dataset: str
+    datasets: dict[str, DataArtifact] = Field(min_length=1)
+    region_datasets: dict[str, RegionDataset] = Field(default_factory=dict)
+    certification: LegacyCountryCertification
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class LegacyProfile(BundleModel):
+    packages: list[str] = Field(min_length=1)
+    countries: list[str] = Field(min_length=1)
+    description: str | None = None
+    install_targets: dict[str, LegacyInstallTarget] = Field(default_factory=dict)
+
+
+class LegacyBundleManifest(BundleModel):
+    schema_version: Literal[1]
+    bundle_version: str
+    policyengine: PackagePin
+    packages: dict[str, PackagePin] = Field(min_length=1)
+    profiles: dict[str, LegacyProfile] = Field(min_length=1)
+    countries: dict[str, str] = Field(min_length=1)
+    validation_report: str
+    created_at: str | None = None
+    bundle_digest: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class CompatibilityAssertion(BundleModel):
     basis: Literal["bundle_candidate"] = "bundle_candidate"
     model_package: PackagePin
@@ -336,6 +448,29 @@ class BundleManifest(BundleModel):
     validation_report: str
     created_at: str | None = None
     bundle_digest: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class LegacyValidationCheck(BundleModel):
+    name: str
+    status: Literal["passed", "failed", "skipped"]
+    profile: str | None = None
+    country: str | None = None
+    artifact: str | None = None
+    python_version: str | None = None
+    command: str | None = None
+    started_at: str | None = None
+    ended_at: str | None = None
+    log_uri: str | None = None
+    details: dict[str, Any] = Field(default_factory=dict)
+
+
+class LegacyValidationReport(BundleModel):
+    schema_version: Literal[1]
+    bundle_version: str
+    generated_at: str
+    status: Literal["passed", "failed", "skipped"]
+    checks: list[LegacyValidationCheck] = Field(min_length=1)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 

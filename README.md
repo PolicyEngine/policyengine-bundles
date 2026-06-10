@@ -50,6 +50,13 @@ Registry validation is intentionally light. It checks that:
 
 Validation does not download dataset artifacts or create Python environments.
 
+## Historical Bundles
+
+Schema v1 bundles under `bundles/` are read-only historical artifacts. The
+tooling can load and check their internal metadata consistency, but it does not
+generate new schema v1 bundles, re-run their runtime validation, package them as
+active releases, or open `policyengine.py` consuming PRs for them.
+
 ## Local Workflow
 
 Install tooling:

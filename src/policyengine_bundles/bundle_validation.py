@@ -21,6 +21,7 @@ def _now_timestamp() -> str:
 
 def validate_bundle(bundle_dir: Path | str) -> ValidationReport:
     root = Path(bundle_dir)
+    _require_schema_v2_bundle(root)
     try:
         bundle = load_bundle_directory(root)
     except Exception as exc:
@@ -57,6 +58,15 @@ def validate_bundle(bundle_dir: Path | str) -> ValidationReport:
     )
     load_bundle_directory(bundle.root)
     return report
+
+
+def _require_schema_v2_bundle(root: Path) -> None:
+    schema_version = load_json(root / "bundle.json").get("schema_version")
+    if schema_version == 1:
+        raise ValueError(
+            "validate_bundle only supports active schema v2 bundles; "
+            "schema_version=1 is a read-only historical bundle."
+        )
 
 
 def _bundle_load_failure_report(

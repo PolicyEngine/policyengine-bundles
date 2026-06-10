@@ -23,6 +23,11 @@ DEFAULT_RELEASE_BASE_URL = (
 
 def package_bundle_release(bundle_dir: Path, output_dir: Path) -> tuple[Path, Path]:
     bundle = load_bundle_directory(bundle_dir)
+    if bundle.manifest.schema_version != 2:
+        raise ValueError(
+            "Schema v1 bundles are read-only historical artifacts and cannot be "
+            "packaged as active releases."
+        )
     _validate_release_ready(bundle)
     if bundle.root.name != bundle.manifest.bundle_version:
         raise ValueError(
