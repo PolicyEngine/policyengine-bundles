@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "bundle_version": "4.15.0",
+  "countries": {
+    "us": {
+      "data_release_manifest_uri": "hf://dataset/policyengine/populace-us@populace-us-2024-9f1260b-20260611/releases/populace-us-2024-9f1260b-20260611/release_manifest.json",
+      "model_package": "policyengine-us"
+    }
+  },
+  "packages": {
+    "policyengine-core": "3.27.0",
+    "policyengine-us": "1.723.0"
+  }
+}
