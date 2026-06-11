@@ -5,10 +5,10 @@
  "artifact_release": {
   "repo_id": "policyengine/populace-us",
   "repo_type": "dataset",
-  "release_manifest_uri": "hf://dataset/policyengine/populace-us@269e92be58e08e3ad1cf825360d38c3d5dab7e0e/releases/populace-us-2024-v2/release_manifest.json"
+  "release_manifest_uri": "hf://dataset/policyengine/populace-us@269e92be58e08e3ad1cf825360d38c3d5dab7e0e/releases/populace-us-2024-1abddeb-20260611/release_manifest.json"
  },
  "release_manifest": {
-  "release_id": "populace-us-2024-v2",
+  "release_id": "populace-us-2024-1abddeb-20260611",
   "country_id": "us",
   "artifacts": {
    "populace_us_2024": {
