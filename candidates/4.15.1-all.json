@@ -1,0 +1,19 @@
+{
+    "bundle_version": "4.15.1",
+    "countries": {
+        "uk": {
+            "data_release_manifest_uri": "hf://model/policyengine/policyengine-uk-data-private@655dd07e4bb9c777b00dac044949611f1feb824f/release_manifest.json",
+            "model_package": "policyengine-uk"
+        },
+        "us": {
+            "data_release_manifest_uri": "hf://model/policyengine/policyengine-us-data@9531fe1d096244fe7eb45d791d52ef61b8a2a0a5/releases/1.115.5/release_manifest.json",
+            "model_package": "policyengine-us"
+        }
+    },
+    "packages": {
+        "policyengine-core": "3.26.1",
+        "policyengine-uk": "2.89.0",
+        "policyengine-us": "1.722.4"
+    },
+    "schema_version": 2
+}
