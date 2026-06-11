@@ -8,7 +8,7 @@
     }
   },
   "packages": {
-    "policyengine-core": "3.27.0",
+    "policyengine-core": "3.27.1",
     "policyengine-us": "1.723.0"
   }
 }

@@ -21,7 +21,7 @@
       "details": {
         "failures": [],
         "package": "policyengine-core",
-        "version": "3.27.0"
+        "version": "3.27.1"
       },
       "name": "package_pin",
       "status": "passed"
@@ -52,7 +52,7 @@
       "country": "us",
       "details": {
         "failures": [],
-        "release_manifest_sha256": "4219254c0af56793289081d312d28ae70c3391ae20adf1c469bda3af989d97d6",
+        "release_manifest_sha256": "c2e51b22d84760923c7750f88f2cc0c0e22620abee54a58c84af93f6cf4a3506",
         "release_manifest_uri": "hf://dataset/policyengine/populace-us@populace-us-2024-5da5a95-20260611/releases/populace-us-2024-5da5a95-20260611/release_manifest.json"
       },
       "name": "release_manifest_provenance",
@@ -8635,7 +8635,7 @@
       "status": "passed"
     }
   ],
-  "generated_at": "2026-06-11T17:41:56Z",
+  "generated_at": "2026-06-11T18:21:06Z",
   "metadata": {
     "generated_by": "scripts/validate_bundle.py",
     "validation_kind": "registry"
