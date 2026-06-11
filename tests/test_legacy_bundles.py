@@ -13,16 +13,22 @@ from policyengine_bundles.validation import load_bundle_directory
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 LEGACY_BUNDLES_ROOT = REPO_ROOT / "bundles"
-LEGACY_VERSIONS = ("4.4.2", "4.4.3", "4.4.4")
+LEGACY_BUNDLE_COUNTRIES = {
+    "4.3.1": {"uk", "us"},
+    "4.4.2": {"uk", "us"},
+    "4.4.3": {"uk", "us"},
+    "4.4.4": {"uk", "us"},
+    "4.14.0": {"us"},
+}
 
 
-@pytest.mark.parametrize("version", LEGACY_VERSIONS)
+@pytest.mark.parametrize("version", LEGACY_BUNDLE_COUNTRIES)
 def test_committed_legacy_bundle_loads_read_only(version: str) -> None:
     bundle = load_bundle_directory(LEGACY_BUNDLES_ROOT / version)
 
     assert bundle.manifest.schema_version == 1
     assert bundle.manifest.bundle_version == version
-    assert set(bundle.countries) == {"uk", "us"}
+    assert set(bundle.countries) == LEGACY_BUNDLE_COUNTRIES[version]
 
 
 def test_validate_bundle_rejects_legacy_bundle_without_writing_report() -> None:

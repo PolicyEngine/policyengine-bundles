@@ -52,6 +52,25 @@ class PackagePin(BundleModel):
         return self.role == "bundle_carrier"
 
 
+class LegacyPackagePin(BundleModel):
+    name: str
+    version: str | None = None
+    specifier: str | None = None
+    resolution_status: Literal["pinned", "specifier_only", "unresolved"] | None = None
+    role: Literal["runtime_dependency", "bundle_carrier"] | None = None
+    wheel_url: str | None = None
+    sdist_url: str | None = None
+    sha256: str | None = None
+    git_sha: str | None = None
+    source: str | None = None
+
+    @model_validator(mode="after")
+    def require_version_or_specifier(self) -> LegacyPackagePin:
+        if self.version is None and self.specifier is None:
+            raise ValueError("Legacy package pins require version or specifier.")
+        return self
+
+
 class RuntimeComponentMetadata(BundleModel):
     """Dependency-free metadata emitted by component packages."""
 
@@ -89,6 +108,14 @@ class ArtifactRelease(BundleModel):
     repo_type: str = "model"
     release_manifest_uri: str
     release_manifest_sha256: str
+
+
+class LegacyArtifactRelease(BundleModel):
+    repo_id: str
+    version: str
+    repo_type: str = "model"
+    release_manifest_uri: str | None = None
+    release_manifest_sha256: str | None = None
 
 
 class PreservationMirror(BundleModel):
@@ -365,15 +392,15 @@ class LegacyInstallTarget(BundleModel):
 
 class LegacyCountryCertification(BundleModel):
     compatibility_basis: str
-    built_with_model_package: PackagePin
-    built_with_core_package: PackagePin
-    certified_for_model_package: PackagePin
-    certified_for_core_package: PackagePin
+    built_with_model_package: LegacyPackagePin
+    built_with_core_package: LegacyPackagePin
+    certified_for_model_package: LegacyPackagePin
+    certified_for_core_package: LegacyPackagePin
     certified_by: str
     data_build_id: str | None = None
     data_build_fingerprint: str | None = None
     runtime_model_package: RuntimeComponentMetadata | None = None
-    runtime_core_package: RuntimeComponentMetadata | PackagePin | None = None
+    runtime_core_package: RuntimeComponentMetadata | LegacyPackagePin | None = None
     evidence: list[CertificationEvidence] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
@@ -382,10 +409,10 @@ class LegacyCountryBundle(BundleModel):
     schema_version: Literal[1]
     bundle_version: str
     country_id: str
-    model_package: PackagePin
-    core_package: PackagePin
+    model_package: LegacyPackagePin
+    core_package: LegacyPackagePin
     data_package: DataPackageReference
-    artifact_release: ArtifactRelease | None = None
+    artifact_release: LegacyArtifactRelease | None = None
     default_dataset: str
     datasets: dict[str, DataArtifact] = Field(min_length=1)
     region_datasets: dict[str, RegionDataset] = Field(default_factory=dict)
@@ -403,8 +430,8 @@ class LegacyProfile(BundleModel):
 class LegacyBundleManifest(BundleModel):
     schema_version: Literal[1]
     bundle_version: str
-    policyengine: PackagePin
-    packages: dict[str, PackagePin] = Field(min_length=1)
+    policyengine: LegacyPackagePin
+    packages: dict[str, LegacyPackagePin] = Field(min_length=1)
     profiles: dict[str, LegacyProfile] = Field(min_length=1)
     countries: dict[str, str] = Field(min_length=1)
     validation_report: str

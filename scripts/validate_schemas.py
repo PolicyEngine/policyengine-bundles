@@ -7,6 +7,7 @@ from typing import Any
 from jsonschema.validators import validator_for
 
 from policyengine_bundles.models import (
+    LegacyBundleCandidate,
     LegacyBundleManifest,
     LegacyCountryBundle,
     LegacyValidationReport,
@@ -122,6 +123,10 @@ def main() -> int:
     if not candidate_paths:
         raise SystemExit("No example or release bundle candidates found.")
     for candidate_path in candidate_paths:
+        if schema_version(candidate_path) == 1:
+            LegacyBundleCandidate.model_validate(load_json(candidate_path))
+            print(f"legacy candidate ok: {candidate_path.relative_to(REPO_ROOT)}")
+            continue
         validate_instance(candidate_schema, candidate_path)
         print(f"candidate ok: {candidate_path.relative_to(REPO_ROOT)}")
 

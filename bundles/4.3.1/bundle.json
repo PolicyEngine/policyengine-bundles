@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "bundle_version": "4.3.1",
+  "created_at": "2026-04-30T00:00:00Z",
+  "policyengine": {
+    "name": "policyengine",
+    "version": "4.3.1",
+    "resolution_status": "pinned",
+    "wheel_url": "https://files.pythonhosted.org/packages/90/79/2ca03a0e8459705115c9b1fec89ccda87226ebcc9ca0a470b6cf08096e60/policyengine-4.3.1-py3-none-any.whl",
+    "sdist_url": "https://files.pythonhosted.org/packages/c2/3d/70f78072ce19819659d5f73acd7584d5f8147c804b3041a432eb5236a841/policyengine-4.3.1.tar.gz",
+    "sha256": "8a83fc5130aef66dc3442a8da45119e9b712e942a097fdd8a0b3194708fbbdb5",
+    "source": "pypi"
+  },
+  "packages": {
+    "policyengine": {
+      "name": "policyengine",
+      "version": "4.3.1",
+      "resolution_status": "pinned",
+      "wheel_url": "https://files.pythonhosted.org/packages/90/79/2ca03a0e8459705115c9b1fec89ccda87226ebcc9ca0a470b6cf08096e60/policyengine-4.3.1-py3-none-any.whl",
+      "sdist_url": "https://files.pythonhosted.org/packages/c2/3d/70f78072ce19819659d5f73acd7584d5f8147c804b3041a432eb5236a841/policyengine-4.3.1.tar.gz",
+      "sha256": "8a83fc5130aef66dc3442a8da45119e9b712e942a097fdd8a0b3194708fbbdb5",
+      "source": "pypi"
+    },
+    "policyengine-core": {
+      "name": "policyengine-core",
+      "specifier": ">=3.25.0",
+      "resolution_status": "specifier_only",
+      "source": "policyengine-4.3.1 Requires-Dist"
+    },
+    "policyengine-us": {
+      "name": "policyengine-us",
+      "version": "1.653.3",
+      "resolution_status": "pinned",
+      "wheel_url": "https://files.pythonhosted.org/packages/02/07/25f39a2bfa1ff210cd8e78826c47c03b9040a98a83f4eed59c434c1ed862/policyengine_us-1.653.3-py3-none-any.whl",
+      "sha256": "67a49b98d85c060b24d547a569e91a6703c0fc9c41299c1c67f4ecfac75c67c6",
+      "source": "policyengine.py bundled us release manifest"
+    },
+    "policyengine-uk": {
+      "name": "policyengine-uk",
+      "version": "2.88.0",
+      "resolution_status": "pinned",
+      "wheel_url": "https://files.pythonhosted.org/packages/23/7e/8a2a42eac1da63730a865964aa17e7fd4420ce4db4c80001c1b5ca6011e8/policyengine_uk-2.88.0-py3-none-any.whl",
+      "sha256": "46a3ba443b43ec810c5efaccd4645edb63c8dc90ef5acf9b0cdf5ace86b9334d",
+      "source": "policyengine.py bundled uk release manifest"
+    }
+  },
+  "profiles": {
+    "us": {
+      "description": "US runtime profile seeded from policyengine==4.3.1.",
+      "packages": [
+        "policyengine",
+        "policyengine-core",
+        "policyengine-us"
+      ],
+      "countries": [
+        "us"
+      ]
+    },
+    "uk": {
+      "description": "UK runtime profile seeded from policyengine==4.3.1.",
+      "packages": [
+        "policyengine",
+        "policyengine-core",
+        "policyengine-uk"
+      ],
+      "countries": [
+        "uk"
+      ]
+    },
+    "all": {
+      "description": "All-country runtime profile seeded from policyengine==4.3.1.",
+      "packages": [
+        "policyengine",
+        "policyengine-core",
+        "policyengine-us",
+        "policyengine-uk"
+      ],
+      "countries": [
+        "us",
+        "uk"
+      ]
+    }
+  },
+  "countries": {
+    "us": "countries/us.json",
+    "uk": "countries/uk.json"
+  },
+  "validation_report": "validation-report.json",
+  "metadata": {
+    "seed_type": "historical_pypi_wheel",
+    "testing_only": true,
+    "source_release_url": "https://pypi.org/project/policyengine/4.3.1/",
+    "source_wheel_uploaded_at": "2026-04-21T13:44:09.990795Z",
+    "known_limitations": [
+      "policyengine-core was specified as >=3.25.0, so this historical seed cannot prove an exact core version.",
+      "The policyengine==4.3.1 wheel bundled country manifests whose bundle_id and policyengine_version fields say 4.0.0.",
+      "No lockfiles or constraints files are included yet.",
+      "Integration tests were not run as part of this seed."
+    ]
+  }
+}

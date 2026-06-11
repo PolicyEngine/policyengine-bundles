@@ -1,0 +1,71 @@
+{
+  "bundle_version": "4.14.0",
+  "countries": {
+    "us": "countries/us.json"
+  },
+  "created_at": "2026-06-05T15:58:26Z",
+  "metadata": {
+    "generated_by": "scripts/generate_bundle.py",
+    "install_artifact_layout": "install/{profile}/{python}/",
+    "python_platform": "x86_64-manylinux_2_28",
+    "python_versions": [
+      "3.13"
+    ],
+    "testing_only": false
+  },
+  "packages": {
+    "policyengine": {
+      "name": "policyengine",
+      "resolution_status": "pinned",
+      "role": "bundle_carrier",
+      "version": "4.14.0"
+    },
+    "policyengine-core": {
+      "name": "policyengine-core",
+      "resolution_status": "pinned",
+      "sdist_url": "https://files.pythonhosted.org/packages/e7/56/666e1e708cbd61078989edc943d5389d45123beb7124a5e3180171656ff6/policyengine_core-3.26.1.tar.gz",
+      "sha256": "185374b3c1fe13dc951637c49a9853211ca61a8a9971eb9cc4c4b07b1477240a",
+      "source": "pypi",
+      "version": "3.26.1",
+      "wheel_url": "https://files.pythonhosted.org/packages/15/2f/9be635fe4dfb2fe65d200c33695f5a96ef98a2921f06ff6d465384b0e551/policyengine_core-3.26.1-py3-none-any.whl"
+    },
+    "policyengine-us": {
+      "name": "policyengine-us",
+      "resolution_status": "pinned",
+      "sdist_url": "https://files.pythonhosted.org/packages/60/bc/ea8cf84d7653d4d76d1f7b05feb74722ff903637c616357610de1fd3b431/policyengine_us-1.715.3.tar.gz",
+      "sha256": "a34f305871f702d94f7a4d220bfd5312f11d83a417e793566892541871dfded3",
+      "source": "pypi",
+      "version": "1.715.3",
+      "wheel_url": "https://files.pythonhosted.org/packages/f4/0f/e6b594d46fffeb6e40db3a51441cec6a6e76ade2b178eab3836528dbc15c/policyengine_us-1.715.3-py3-none-any.whl"
+    }
+  },
+  "policyengine": {
+    "name": "policyengine",
+    "resolution_status": "pinned",
+    "role": "bundle_carrier",
+    "version": "4.14.0"
+  },
+  "profiles": {
+    "us": {
+      "countries": [
+        "us"
+      ],
+      "description": "us runtime profile generated from bundle candidate.",
+      "install_targets": {
+        "py313": {
+          "constraints": "install/us/py313/constraints.txt",
+          "lockfile": "install/us/py313/pylock.toml",
+          "python_version": "3.13",
+          "resolver": "uv"
+        }
+      },
+      "packages": [
+        "policyengine",
+        "policyengine-core",
+        "policyengine-us"
+      ]
+    }
+  },
+  "schema_version": 1,
+  "validation_report": "validation-report.json"
+}

@@ -40,14 +40,24 @@ def changed_paths(before: str, after: str) -> list[str]:
     return subprocess.check_output(command, text=True).splitlines()
 
 
+def load_candidate(path: Path) -> dict:
+    return json.loads(path.read_text())
+
+
+def is_active_candidate(path: Path) -> bool:
+    return load_candidate(path).get("schema_version") == 2
+
+
 def latest_candidate_version() -> str:
     candidates = []
     for path in Path("candidates").glob("*.json"):
-        payload = json.loads(path.read_text())
+        if not is_active_candidate(path):
+            continue
+        payload = load_candidate(path)
         version = payload["bundle_version"]
         candidates.append((version_key(version), version))
     if not candidates:
-        raise SystemExit("No bundle candidates found.")
+        raise SystemExit("No active schema v2 bundle candidates found.")
     return max(candidates)[1]
 
 
@@ -57,8 +67,8 @@ def changed_bundle_versions(paths: list[str]) -> set[str]:
         parts = Path(changed_path).parts
         if len(parts) >= 2 and parts[0] == "candidates" and parts[1].endswith(".json"):
             path = Path(changed_path)
-            if path.exists():
-                payload = json.loads(path.read_text())
+            if path.exists() and is_active_candidate(path):
+                payload = load_candidate(path)
                 versions.add(payload["bundle_version"])
     return versions
 
@@ -106,11 +116,15 @@ def main() -> int:
 def candidate_path_for_version(version: str) -> Path:
     matches = []
     for path in Path("candidates").glob("*.json"):
-        payload = json.loads(path.read_text())
+        if not is_active_candidate(path):
+            continue
+        payload = load_candidate(path)
         if payload["bundle_version"] == version:
             matches.append(path)
     if not matches:
-        raise SystemExit(f"Committed candidate missing for bundle {version}.")
+        raise SystemExit(
+            f"Committed active schema v2 candidate missing for bundle {version}."
+        )
     if len(matches) > 1:
         raise SystemExit(
             "Expected exactly one candidate for bundle "

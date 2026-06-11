@@ -10,6 +10,7 @@ from policyengine_bundles.models import (
     CountryBundle,
     LegacyBundleManifest,
     LegacyCountryBundle,
+    LegacyPackagePin,
     LegacyValidationReport,
     PackagePin,
     ValidationReport,
@@ -17,6 +18,7 @@ from policyengine_bundles.models import (
 
 LoadedBundleManifest = BundleManifest | LegacyBundleManifest
 LoadedCountryBundle = CountryBundle | LegacyCountryBundle
+LoadedPackagePin = PackagePin | LegacyPackagePin
 LoadedValidationReport = ValidationReport | LegacyValidationReport
 
 
@@ -254,7 +256,7 @@ def _validate_package_matches_manifest(
     *,
     manifest: LoadedBundleManifest,
     country_id: str,
-    package: PackagePin,
+    package: LoadedPackagePin,
     field_name: str,
 ) -> None:
     manifest_package = manifest.packages.get(package.name)
