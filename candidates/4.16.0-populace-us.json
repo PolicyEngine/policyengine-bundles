@@ -1,6 +1,6 @@
 {
   "schema_version": 2,
-  "bundle_version": "4.15.0",
+  "bundle_version": "4.16.0",
   "countries": {
     "us": {
       "data_release_manifest_uri": "hf://dataset/policyengine/populace-us@populace-us-2024-5da5a95-20260611/releases/populace-us-2024-5da5a95-20260611/release_manifest.json",
