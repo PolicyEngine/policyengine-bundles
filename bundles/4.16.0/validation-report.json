@@ -52,7 +52,7 @@
       "country": "us",
       "details": {
         "failures": [],
-        "release_manifest_sha256": "677f1d90daeed43f8e276e15eb79d1fb085866b3c129bda2002fc9b07f32cd3d",
+        "release_manifest_sha256": "6d2584bd31838a7c6f64f15c8cd91dc4a7787c7e13e5d964519a9a405f159ff6",
         "release_manifest_uri": "hf://dataset/policyengine/populace-us@populace-us-2024-5da5a95-20260611/releases/populace-us-2024-5da5a95-20260611/release_manifest.json"
       },
       "name": "release_manifest_provenance",
@@ -500,6 +500,81 @@
           "districts/WV-01",
           "districts/WV-02",
           "districts/WY-01",
+          "long_term_cps_2026",
+          "long_term_cps_2027",
+          "long_term_cps_2028",
+          "long_term_cps_2029",
+          "long_term_cps_2030",
+          "long_term_cps_2031",
+          "long_term_cps_2032",
+          "long_term_cps_2033",
+          "long_term_cps_2034",
+          "long_term_cps_2035",
+          "long_term_cps_2036",
+          "long_term_cps_2037",
+          "long_term_cps_2038",
+          "long_term_cps_2039",
+          "long_term_cps_2040",
+          "long_term_cps_2041",
+          "long_term_cps_2042",
+          "long_term_cps_2043",
+          "long_term_cps_2044",
+          "long_term_cps_2045",
+          "long_term_cps_2046",
+          "long_term_cps_2047",
+          "long_term_cps_2048",
+          "long_term_cps_2049",
+          "long_term_cps_2050",
+          "long_term_cps_2051",
+          "long_term_cps_2052",
+          "long_term_cps_2053",
+          "long_term_cps_2054",
+          "long_term_cps_2055",
+          "long_term_cps_2056",
+          "long_term_cps_2057",
+          "long_term_cps_2058",
+          "long_term_cps_2059",
+          "long_term_cps_2060",
+          "long_term_cps_2061",
+          "long_term_cps_2062",
+          "long_term_cps_2063",
+          "long_term_cps_2064",
+          "long_term_cps_2065",
+          "long_term_cps_2066",
+          "long_term_cps_2067",
+          "long_term_cps_2068",
+          "long_term_cps_2069",
+          "long_term_cps_2070",
+          "long_term_cps_2071",
+          "long_term_cps_2072",
+          "long_term_cps_2073",
+          "long_term_cps_2074",
+          "long_term_cps_2075",
+          "long_term_cps_2076",
+          "long_term_cps_2077",
+          "long_term_cps_2078",
+          "long_term_cps_2079",
+          "long_term_cps_2080",
+          "long_term_cps_2081",
+          "long_term_cps_2082",
+          "long_term_cps_2083",
+          "long_term_cps_2084",
+          "long_term_cps_2085",
+          "long_term_cps_2086",
+          "long_term_cps_2087",
+          "long_term_cps_2088",
+          "long_term_cps_2089",
+          "long_term_cps_2090",
+          "long_term_cps_2091",
+          "long_term_cps_2092",
+          "long_term_cps_2093",
+          "long_term_cps_2094",
+          "long_term_cps_2095",
+          "long_term_cps_2096",
+          "long_term_cps_2097",
+          "long_term_cps_2098",
+          "long_term_cps_2099",
+          "long_term_cps_2100",
           "national/US",
           "policy_data",
           "populace_us_2024",
@@ -6698,6 +6773,1056 @@
       "status": "passed"
     },
     {
+      "artifact": "long_term_cps_2026",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2027",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2028",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2029",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2030",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2031",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2032",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2033",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2034",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2035",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2036",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2037",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2038",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2039",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2040",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2041",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2042",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2043",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2044",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2045",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2046",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2047",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2048",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2049",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2050",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2051",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2052",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2053",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2054",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2055",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2056",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2057",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2058",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2059",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2060",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2061",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2062",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2063",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2064",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2065",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2066",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2067",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2068",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2069",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2070",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2071",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2072",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2073",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2074",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2075",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2076",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2077",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2078",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2079",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2080",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2081",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2082",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2083",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2084",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2085",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2086",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2087",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2088",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2089",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2090",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2091",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2092",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2093",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2094",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2095",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2096",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2097",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2098",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2099",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
+      "artifact": "long_term_cps_2100",
+      "country": "us",
+      "details": {
+        "failures": [],
+        "has_path_reference": true,
+        "has_sha256": true,
+        "has_uri": false,
+        "kind": "microdata",
+        "status": "certified"
+      },
+      "name": "data_artifact_metadata",
+      "status": "passed"
+    },
+    {
       "artifact": "national/US",
       "country": "us",
       "details": {
@@ -7510,7 +8635,7 @@
       "status": "passed"
     }
   ],
-  "generated_at": "2026-06-11T16:57:00Z",
+  "generated_at": "2026-06-11T17:06:02Z",
   "metadata": {
     "generated_by": "scripts/validate_bundle.py",
     "validation_kind": "registry"
