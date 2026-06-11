@@ -11,9 +11,10 @@ git config user.name "policyengine-bundles[bot]"
 git config user.email "policyengine-bundles[bot]@users.noreply.github.com"
 git switch -c "$branch"
 
+python -m pip install --upgrade -e .
+
 python scripts/import_policyengine_bundle.py \
-  "$BUNDLE_VERSION" \
-  --dist-dir ../.tmp/dist
+  --archive "../.tmp/dist/policyengine-bundle-$BUNDLE_VERSION.tar.gz"
 
 if [ -z "$(git status --porcelain)" ]; then
   echo "No policyengine.py changes produced."
