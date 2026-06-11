@@ -24,8 +24,10 @@
       "version": "0.1.0"
     },
     "metadata": {
+      "built_with_model_version": "1.723.0",
       "candidate_data_release_manifest_uri": "hf://dataset/policyengine/populace-us@populace-us-2024-5da5a95-20260611/releases/populace-us-2024-5da5a95-20260611/release_manifest.json",
-      "candidate_model_package": "policyengine-us"
+      "candidate_model_package": "policyengine-us",
+      "data_build_id": "populace-us-2024-5da5a95-20260611"
     },
     "model_package": {
       "name": "policyengine-us",

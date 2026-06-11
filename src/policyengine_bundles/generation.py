@@ -255,6 +255,45 @@ def _build_country_bundle(
 ) -> CountryBundle:
     release = DataReleaseManifest.model_validate(loaded_manifest.payload)
     release = _rewrite_artifacts_to_loaded_revision(release, loaded_manifest)
+    return _assemble_country_bundle(
+        release=release,
+        loaded_manifest=loaded_manifest,
+        country=country,
+        country_id=country_id,
+        bundle_version=bundle_version,
+        packages=packages,
+        release_manifest_path=release_manifest_path,
+    )
+
+
+def _build_provenance_metadata(release: DataReleaseManifest) -> dict[str, str]:
+    """Build provenance keys consumed by downstream bundle importers."""
+    build = release.build
+    if build is None:
+        return {}
+    metadata: dict[str, str] = {}
+    if build.build_id:
+        metadata["data_build_id"] = build.build_id
+    model_build = build.built_with_model_package
+    if model_build is not None:
+        metadata["built_with_model_version"] = model_build.version
+        if model_build.git_sha:
+            metadata["built_with_model_git_sha"] = model_build.git_sha
+        if model_build.data_build_fingerprint:
+            metadata["data_build_fingerprint"] = model_build.data_build_fingerprint
+    return metadata
+
+
+def _assemble_country_bundle(
+    *,
+    release: DataReleaseManifest,
+    loaded_manifest: LoadedManifest,
+    country: CandidateCountry,
+    country_id: str,
+    bundle_version: str,
+    packages: Mapping[str, PackagePin],
+    release_manifest_path: str | None,
+) -> CountryBundle:
     model_package = packages[country.model_package]
     core_package = packages["policyengine-core"]
     default_dataset = _default_dataset(release)
@@ -294,6 +333,7 @@ def _build_country_bundle(
                 "candidate_data_release_manifest_uri": (
                     country.data_release_manifest_uri
                 ),
+                **_build_provenance_metadata(release),
             },
         ),
         metadata={
