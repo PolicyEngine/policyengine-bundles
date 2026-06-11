@@ -1,6 +1,6 @@
 {
   "artifact_release": {
-    "release_manifest_sha256": "6d2584bd31838a7c6f64f15c8cd91dc4a7787c7e13e5d964519a9a405f159ff6",
+    "release_manifest_sha256": "4219254c0af56793289081d312d28ae70c3391ae20adf1c469bda3af989d97d6",
     "release_manifest_uri": "hf://dataset/policyengine/populace-us@populace-us-2024-5da5a95-20260611/releases/populace-us-2024-5da5a95-20260611/release_manifest.json",
     "repo_id": "policyengine/populace-us",
     "repo_type": "dataset",
@@ -38,7 +38,7 @@
       "version": "1.723.0",
       "wheel_url": "https://files.pythonhosted.org/packages/fb/9e/8611bf46cf488981f0450bbfda8df8c9fc3d21e7bb5fc4398da9890b3d3c/policyengine_us-1.723.0-py3-none-any.whl"
     },
-    "release_manifest_sha256": "6d2584bd31838a7c6f64f15c8cd91dc4a7787c7e13e5d964519a9a405f159ff6",
+    "release_manifest_sha256": "4219254c0af56793289081d312d28ae70c3391ae20adf1c469bda3af989d97d6",
     "release_manifest_uri": "hf://dataset/policyengine/populace-us@populace-us-2024-5da5a95-20260611/releases/populace-us-2024-5da5a95-20260611/release_manifest.json"
   },
   "core_package": {
@@ -6269,7 +6269,7 @@
   },
   "default_dataset": "populace_us_2024",
   "metadata": {
-    "input_release_manifest_sha256": "6d2584bd31838a7c6f64f15c8cd91dc4a7787c7e13e5d964519a9a405f159ff6",
+    "input_release_manifest_sha256": "4219254c0af56793289081d312d28ae70c3391ae20adf1c469bda3af989d97d6",
     "input_release_manifest_uri": "hf://dataset/policyengine/populace-us@populace-us-2024-5da5a95-20260611/releases/populace-us-2024-5da5a95-20260611/release_manifest.json"
   },
   "model_package": {
@@ -6281,6 +6281,16 @@
     "version": "1.723.0",
     "wheel_url": "https://files.pythonhosted.org/packages/fb/9e/8611bf46cf488981f0450bbfda8df8c9fc3d21e7bb5fc4398da9890b3d3c/policyengine_us-1.723.0-py3-none-any.whl"
   },
-  "region_datasets": {},
+  "region_datasets": {
+    "congressional_district": {
+      "path_template": "districts/{district_code}.h5"
+    },
+    "national": {
+      "path_template": "populace_us_2024.h5"
+    },
+    "state": {
+      "path_template": "states/{state_code}.h5"
+    }
+  },
   "schema_version": 2
 }

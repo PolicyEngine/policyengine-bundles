@@ -52,7 +52,7 @@
       "country": "us",
       "details": {
         "failures": [],
-        "release_manifest_sha256": "6d2584bd31838a7c6f64f15c8cd91dc4a7787c7e13e5d964519a9a405f159ff6",
+        "release_manifest_sha256": "4219254c0af56793289081d312d28ae70c3391ae20adf1c469bda3af989d97d6",
         "release_manifest_uri": "hf://dataset/policyengine/populace-us@populace-us-2024-5da5a95-20260611/releases/populace-us-2024-5da5a95-20260611/release_manifest.json"
       },
       "name": "release_manifest_provenance",
@@ -8635,7 +8635,7 @@
       "status": "passed"
     }
   ],
-  "generated_at": "2026-06-11T17:27:37Z",
+  "generated_at": "2026-06-11T17:41:56Z",
   "metadata": {
     "generated_by": "scripts/validate_bundle.py",
     "validation_kind": "registry"
