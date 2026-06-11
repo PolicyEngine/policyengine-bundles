@@ -1,0 +1,14 @@
+{
+  "schema_version": 2,
+  "bundle_version": "4.16.0",
+  "countries": {
+    "uk": {
+      "data_release_manifest_uri": "hf://dataset/policyengine/populace-uk-private@populace-uk-2023-72aeefc-20260611/releases/populace-uk-2023-72aeefc-20260611/release_manifest.json",
+      "model_package": "policyengine-uk"
+    }
+  },
+  "packages": {
+    "policyengine-core": "3.27.0",
+    "policyengine-uk": "2.88.14"
+  }
+}
