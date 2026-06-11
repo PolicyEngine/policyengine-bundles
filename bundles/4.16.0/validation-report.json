@@ -8635,7 +8635,7 @@
       "status": "passed"
     }
   ],
-  "generated_at": "2026-06-11T17:06:02Z",
+  "generated_at": "2026-06-11T17:27:37Z",
   "metadata": {
     "generated_by": "scripts/validate_bundle.py",
     "validation_kind": "registry"
