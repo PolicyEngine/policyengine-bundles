@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,8 @@ from policyengine_bundles.digest import (
     verify_bundle_digests,
     write_bundle_digest,
 )
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_compute_bundle_digest_ignores_run_local_timestamp_fields(
@@ -83,6 +86,16 @@ def test_verify_bundle_digests_requires_committed_digest(tmp_path: Path) -> None
     failures = verify_bundle_digests(bundles_root)
 
     assert failures == [f"{committed_bundle}: missing bundle_digest"]
+
+
+def test_verify_bundle_digests_skips_legacy_bundles(tmp_path: Path) -> None:
+    bundles_root = tmp_path / "bundles"
+    bundles_root.mkdir()
+    shutil.copytree(REPO_ROOT / "bundles" / "4.4.2", bundles_root / "4.4.2")
+
+    failures = verify_bundle_digests(bundles_root)
+
+    assert failures == []
 
 
 def test_verify_bundle_digests_rejects_stale_committed_digest(
