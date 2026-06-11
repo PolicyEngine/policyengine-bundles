@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from policyengine_bundles.models import (
@@ -7,18 +8,19 @@ from policyengine_bundles.models import (
     BundleManifest,
     CountryBundle,
     DataReleaseManifest,
-    RuntimeComponentMetadata,
+    LegacyBundleCandidate,
     ValidationReport,
 )
-from policyengine_bundles.validation import (
-    load_bundle_directory,
-    load_component_metadata,
-)
+from policyengine_bundles.validation import load_bundle_directory
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BUNDLE_ROOTS = [
     REPO_ROOT / "examples" / "bundles",
     REPO_ROOT / "bundles",
+]
+CANDIDATE_ROOTS = [
+    REPO_ROOT / "examples" / "candidates",
+    REPO_ROOT / "candidates",
 ]
 
 
@@ -30,16 +32,29 @@ def iter_bundle_dirs() -> list[Path]:
     return bundle_dirs
 
 
-def validate_component_metadata_contract() -> None:
-    metadata = load_component_metadata(
-        {
-            "name": "policyengine-core",
-            "version": "3.25.3",
-            "git_sha": "abc123",
-            "wheel_sha256": "0" * 64,
-        }
-    )
-    assert metadata.name == "policyengine-core"
+def iter_candidate_paths() -> list[Path]:
+    candidate_paths: list[Path] = []
+    for root in CANDIDATE_ROOTS:
+        if root.exists():
+            candidate_paths.extend(sorted(root.glob("*.json")))
+    return candidate_paths
+
+
+def validate_candidate_model(candidate_path: Path) -> None:
+    payload = candidate_path.read_text()
+    data = json.loads(payload)
+    schema_version = data.get("schema_version")
+    if schema_version == 1:
+        LegacyBundleCandidate.model_validate_json(payload)
+        print(f"legacy candidate model ok: {candidate_path.relative_to(REPO_ROOT)}")
+        return
+    if schema_version != 2:
+        raise SystemExit(
+            f"{candidate_path.relative_to(REPO_ROOT)} has unsupported "
+            f"candidate schema_version={schema_version!r}."
+        )
+    BundleCandidate.model_validate_json(payload)
+    print(f"candidate model ok: {candidate_path.relative_to(REPO_ROOT)}")
 
 
 def validate_model_schema_export() -> None:
@@ -48,7 +63,6 @@ def validate_model_schema_export() -> None:
         BundleManifest,
         CountryBundle,
         DataReleaseManifest,
-        RuntimeComponentMetadata,
         ValidationReport,
     ):
         schema = model.model_json_schema()
@@ -88,6 +102,12 @@ def validate_data_release_preservation_contract() -> None:
 
 
 def main() -> int:
+    candidate_paths = iter_candidate_paths()
+    if not candidate_paths:
+        raise SystemExit("No example or release bundle candidates found.")
+    for candidate_path in candidate_paths:
+        validate_candidate_model(candidate_path)
+
     bundle_dirs = iter_bundle_dirs()
     if not bundle_dirs:
         raise SystemExit("No example or release bundle directories found.")
@@ -95,9 +115,6 @@ def main() -> int:
     for bundle_dir in bundle_dirs:
         bundle = load_bundle_directory(bundle_dir)
         print(f"bundle models ok: {bundle.root.relative_to(REPO_ROOT)}")
-
-    validate_component_metadata_contract()
-    print("component metadata model ok")
 
     validate_data_release_preservation_contract()
     print("data release preservation model ok")

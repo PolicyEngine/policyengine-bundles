@@ -1,31 +1,39 @@
 {
-  "bundle_version": "0.0.0-example",
+  "bundle_version": "4.14.0",
   "checks": [
     {
-      "country": "us",
       "details": {
-        "reason": "Data artifact and release manifest verification disabled by caller."
+        "bundle_dir": "examples/bundles/example"
       },
-      "name": "data_release_manifest_contract",
-      "profile": "us",
-      "status": "skipped"
+      "name": "bundle_directory_contract",
+      "status": "passed"
     },
     {
       "details": {
-        "reason": "Runtime validation disabled by caller."
+        "package": "policyengine-core",
+        "version": "3.26.0"
       },
-      "name": "runtime_validation",
-      "profile": "us",
-      "status": "skipped"
+      "name": "package_pin",
+      "status": "passed"
+    },
+    {
+      "country": "us",
+      "details": {
+        "basis": "bundle_candidate",
+        "data_package": "policyengine-us-data",
+        "data_package_version": "1.104.0",
+        "model_package": "policyengine-us",
+        "model_package_version": "1.715.2"
+      },
+      "name": "compatibility_assertion",
+      "status": "passed"
     }
   ],
-  "generated_at": "2026-05-09T03:57:56Z",
+  "generated_at": "2026-06-05T00:00:00Z",
   "metadata": {
     "generated_by": "scripts/validate_bundle.py",
-    "validate_runtime": false,
-    "validation_scope": "partial",
-    "verify_data": false
+    "validation_kind": "registry"
   },
-  "schema_version": 1,
-  "status": "skipped"
+  "schema_version": 2,
+  "status": "passed"
 }

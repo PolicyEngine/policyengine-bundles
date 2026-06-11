@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import importlib
 import json
 import urllib.parse
 import urllib.request
@@ -9,24 +8,20 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
+from policyengine_bundles.http import request_with_retries
 from policyengine_bundles.io import JsonDict, load_json, write_bytes, write_json
 from policyengine_bundles.models import (
     ArtifactRelease,
     BundleCandidate,
     BundleManifest,
     CandidateCountry,
-    CertificationEvidence,
+    CompatibilityAssertion,
     CountryBundle,
-    CountryCertification,
     DataArtifact,
-    DataBuildInfo,
     DataPackageReference,
     DataReleaseManifest,
     PackagePin,
-    Profile,
-    RuntimeComponentMetadata,
     ValidationCheck,
     ValidationReport,
 )
@@ -35,14 +30,6 @@ from policyengine_bundles.validation import load_bundle_directory
 
 PackageResolver = Callable[[str, str], PackagePin]
 ManifestLoader = Callable[[str], "LoadedManifest"]
-ComponentMetadataResolver = Callable[[PackagePin], RuntimeComponentMetadata | None]
-
-
-PACKAGE_IMPORT_NAMES = {
-    "policyengine-core": "policyengine_core",
-    "policyengine-us": "policyengine_us",
-    "policyengine-uk": "policyengine_uk",
-}
 
 
 @dataclass(frozen=True)
@@ -56,16 +43,6 @@ class LoadedManifest:
     repo_type: str | None = None
     revision: str | None = None
     path: str | None = None
-
-
-@dataclass(frozen=True)
-class _RuntimeCertification:
-    basis: str
-    certified_by: str
-    runtime_model_package: RuntimeComponentMetadata | None = None
-    runtime_core_package: RuntimeComponentMetadata | PackagePin | None = None
-    evidence: list[CertificationEvidence] | None = None
-    metadata: dict[str, Any] | None = None
 
 
 def _sha256_bytes(content: bytes) -> str:
@@ -103,27 +80,6 @@ def resolve_pypi_package(name: str, version: str) -> PackagePin:
     )
 
 
-def resolve_component_metadata(
-    package: PackagePin,
-) -> RuntimeComponentMetadata | None:
-    """Load dependency-light runtime metadata from an installed component package."""
-    if package.version is None:
-        return None
-    import_name = PACKAGE_IMPORT_NAMES.get(package.name, package.name.replace("-", "_"))
-    for module_name in (f"{import_name}.build_metadata", import_name):
-        try:
-            module = importlib.import_module(module_name)
-        except ImportError:
-            continue
-        get_runtime_metadata = getattr(module, "get_runtime_metadata", None)
-        if get_runtime_metadata is None:
-            continue
-        metadata = RuntimeComponentMetadata.model_validate(get_runtime_metadata())
-        if metadata.name == package.name and metadata.version == package.version:
-            return metadata
-    return None
-
-
 def load_release_manifest_uri(uri: str) -> LoadedManifest:
     parsed = urllib.parse.urlparse(uri)
     if parsed.scheme == "file":
@@ -153,12 +109,15 @@ def load_release_manifest_uri(uri: str) -> LoadedManifest:
 
 
 def _read_hf_bytes(reference: HuggingFaceReference) -> bytes:
-    request = urllib.request.Request(reference.download_url())
-    token = hugging_face_token()
-    if token:
-        request.add_header("Authorization", f"Bearer {token}")
-    with urllib.request.urlopen(request, timeout=60) as response:
-        return response.read()
+    def read_once() -> bytes:
+        request = urllib.request.Request(reference.download_url())
+        token = hugging_face_token()
+        if token:
+            request.add_header("Authorization", f"Bearer {token}")
+        with urllib.request.urlopen(request, timeout=60) as response:
+            return response.read()
+
+    return request_with_retries(read_once)
 
 
 def generate_bundle(
@@ -167,7 +126,6 @@ def generate_bundle(
     *,
     package_resolver: PackageResolver = resolve_pypi_package,
     manifest_loader: ManifestLoader = load_release_manifest_uri,
-    component_metadata_resolver: ComponentMetadataResolver = resolve_component_metadata,
     force: bool = False,
     testing_only: bool = False,
     embed_local_manifests: bool = False,
@@ -204,34 +162,30 @@ def generate_bundle(
                 if local_manifest_path is not None
                 else None
             ),
-            component_metadata_resolver=component_metadata_resolver,
         )
-    _validate_core_agreement(package_pins, countries)
 
     validation_report = ValidationReport(
-        schema_version=1,
+        schema_version=2,
         bundle_version=candidate.bundle_version,
         generated_at=created_at,
         status="skipped",
         checks=[
             ValidationCheck(
-                name="bundle_runtime_validation",
+                name="registry_validation",
                 status="skipped",
-                details={
-                    "reason": (
-                        "Runtime validation is performed by scripts/validate_bundle.py."
-                    )
-                },
+                details={"reason": "Run scripts/validate_bundle.py before release."},
             )
         ],
-        metadata={"generated_by": "scripts/generate_bundle.py"},
+        metadata={
+            "generated_by": "scripts/generate_bundle.py",
+            "validation_kind": "registry",
+        },
     )
     manifest = BundleManifest(
-        schema_version=1,
+        schema_version=2,
         bundle_version=candidate.bundle_version,
         policyengine=package_pins["policyengine"],
         packages=package_pins,
-        profiles=_build_profiles(candidate),
         countries={
             country_id: f"countries/{country_id}.json"
             for country_id in sorted(countries)
@@ -239,7 +193,6 @@ def generate_bundle(
         validation_report="validation-report.json",
         created_at=created_at,
         metadata={
-            "python_versions": candidate.python_versions,
             "generated_by": "scripts/generate_bundle.py",
             "testing_only": testing_only,
         },
@@ -267,7 +220,7 @@ def _resolve_package_pins(
     pins = {
         "policyengine": PackagePin(
             name="policyengine",
-            version=candidate.policyengine_version,
+            version=candidate.bundle_version,
             resolution_status="pinned",
             role="bundle_carrier",
         )
@@ -275,16 +228,16 @@ def _resolve_package_pins(
     pins.update(
         {
             name: _require_exact_pin(package_resolver(name, version))
-            for name, version in candidate.packages.items()
+            for name, version in sorted(candidate.packages.items())
         }
     )
     return pins
 
 
 def _require_exact_pin(pin: PackagePin) -> PackagePin:
-    if pin.version is None:
+    if not pin.version:
         raise ValueError(f"{pin.name} must resolve to an exact version.")
-    if pin.resolution_status not in {None, "pinned"}:
+    if pin.resolution_status != "pinned":
         raise ValueError(f"{pin.name} must be pinned, got {pin.resolution_status}.")
     if pin.sha256 is None:
         raise ValueError(f"{pin.name} must include a wheel sha256.")
@@ -299,42 +252,16 @@ def _build_country_bundle(
     packages: Mapping[str, PackagePin],
     loaded_manifest: LoadedManifest,
     release_manifest_path: str | None,
-    component_metadata_resolver: ComponentMetadataResolver,
 ) -> CountryBundle:
     release = DataReleaseManifest.model_validate(loaded_manifest.payload)
     release = _rewrite_artifacts_to_loaded_revision(release, loaded_manifest)
     model_package = packages[country.model_package]
     core_package = packages["policyengine-core"]
-    build = _require_build_metadata(release)
-    built_with_model_package = _require_exact_build_package(
-        release=release,
-        package=build.built_with_model_package,
-        field_name="built_with_model_package",
-    )
-    built_with_core_package = _require_exact_build_package(
-        release=release,
-        package=build.built_with_core_package,
-        field_name="built_with_core_package",
-    )
-    runtime_certification = _certify_runtime_compatibility(
-        release=release,
-        country=country,
-        model_package=model_package,
-        core_package=core_package,
-        built_with_model_package=built_with_model_package,
-        built_with_core_package=built_with_core_package,
-        component_metadata_resolver=component_metadata_resolver,
-    )
-
     default_dataset = _default_dataset(release)
     artifact_release = _artifact_release(
         release=release,
         loaded_manifest=loaded_manifest,
-        release_manifest_uri=(
-            None
-            if loaded_manifest.local_path is not None and release_manifest_path
-            else loaded_manifest.uri
-        ),
+        release_manifest_uri=loaded_manifest.uri,
     )
     data_package = DataPackageReference(
         name=release.data_package.name,
@@ -343,9 +270,10 @@ def _build_country_bundle(
         repo_type=artifact_release.repo_type,
         release_manifest_path=release_manifest_path
         or _release_manifest_path(loaded_manifest),
+        release_manifest_revision=loaded_manifest.revision,
     )
     return CountryBundle(
-        schema_version=1,
+        schema_version=2,
         bundle_version=bundle_version,
         country_id=country_id,
         model_package=model_package,
@@ -354,131 +282,25 @@ def _build_country_bundle(
         artifact_release=artifact_release,
         default_dataset=default_dataset,
         datasets=release.artifacts,
-        certification=CountryCertification(
-            compatibility_basis=runtime_certification.basis,
-            built_with_model_package=_metadata_to_package_pin(
-                built_with_model_package,
-            ),
-            built_with_core_package=_metadata_to_package_pin(
-                built_with_core_package,
-            ),
-            certified_for_model_package=model_package,
-            certified_for_core_package=core_package,
-            certified_by=runtime_certification.certified_by,
-            data_build_id=build.build_id,
-            data_build_fingerprint=(
-                built_with_model_package.data_build_fingerprint
-                if hasattr(built_with_model_package, "data_build_fingerprint")
-                else None
-            ),
-            runtime_model_package=runtime_certification.runtime_model_package,
-            runtime_core_package=runtime_certification.runtime_core_package,
-            evidence=runtime_certification.evidence or [],
-            metadata=runtime_certification.metadata or {},
+        region_datasets=_region_datasets(release),
+        compatibility=CompatibilityAssertion(
+            model_package=model_package,
+            core_package=core_package,
+            data_package=release.data_package,
+            release_manifest_uri=loaded_manifest.uri,
+            release_manifest_sha256=loaded_manifest.sha256,
+            metadata={
+                "candidate_model_package": country.model_package,
+                "candidate_data_release_manifest_uri": (
+                    country.data_release_manifest_uri
+                ),
+            },
         ),
         metadata={
             "input_release_manifest_uri": loaded_manifest.uri,
             "input_release_manifest_sha256": loaded_manifest.sha256,
         },
     )
-
-
-def _require_build_metadata(release: DataReleaseManifest) -> DataBuildInfo:
-    if release.build is None:
-        raise ValueError(
-            f"{release.data_package.name}=={release.data_package.version} must "
-            "record build metadata for bundle certification."
-        )
-    return release.build
-
-
-def _require_exact_build_package(
-    *,
-    release: DataReleaseManifest,
-    package: RuntimeComponentMetadata | PackagePin | None,
-    field_name: str,
-) -> RuntimeComponentMetadata | PackagePin:
-    if package is None:
-        raise ValueError(
-            f"{release.data_package.name}=={release.data_package.version} must "
-            f"record {field_name} for bundle certification."
-        )
-    if package.version is None:
-        raise ValueError(
-            f"{release.data_package.name}=={release.data_package.version} "
-            f"{field_name} must record an exact version."
-        )
-    return package
-
-
-def _certify_runtime_compatibility(
-    *,
-    release: DataReleaseManifest,
-    country: CandidateCountry,
-    model_package: PackagePin,
-    core_package: PackagePin,
-    built_with_model_package: RuntimeComponentMetadata | PackagePin,
-    built_with_core_package: RuntimeComponentMetadata | PackagePin,
-    component_metadata_resolver: ComponentMetadataResolver,
-) -> _RuntimeCertification:
-    if _package_metadata_matches_pin(
-        built_with_model_package,
-        model_package,
-    ) and _package_metadata_matches_pin(built_with_core_package, core_package):
-        return _RuntimeCertification(
-            basis="data_release_build_package_match",
-            certified_by="policyengine-bundles generator",
-        )
-
-    runtime_model_package = component_metadata_resolver(model_package)
-    runtime_core_package = component_metadata_resolver(core_package)
-    if (
-        _package_metadata_matches_pin(built_with_core_package, core_package)
-        and built_with_model_package.name == model_package.name
-        and runtime_model_package is not None
-        and _package_metadata_matches_pin(runtime_model_package, model_package)
-        and (
-            runtime_core_package is None
-            or _package_metadata_matches_pin(runtime_core_package, core_package)
-        )
-        and runtime_model_package.data_build_fingerprint is not None
-        and hasattr(built_with_model_package, "data_build_fingerprint")
-        and runtime_model_package.data_build_fingerprint
-        == built_with_model_package.data_build_fingerprint
-    ):
-        return _RuntimeCertification(
-            basis="matching_data_build_fingerprint",
-            certified_by="policyengine-bundles generator",
-            runtime_model_package=runtime_model_package,
-            runtime_core_package=runtime_core_package,
-        )
-
-    if country.certification is not None:
-        return _RuntimeCertification(
-            basis=country.certification.basis,
-            certified_by=country.certification.certified_by,
-            runtime_model_package=runtime_model_package,
-            runtime_core_package=runtime_core_package,
-            evidence=country.certification.evidence,
-            metadata={
-                **country.certification.metadata,
-                "reason": country.certification.reason,
-            },
-        )
-
-    raise ValueError(
-        f"{release.data_package.name}=={release.data_package.version} is not "
-        f"certified for {model_package.name}=={model_package.version} and "
-        f"{core_package.name}=={core_package.version}. Add matching runtime "
-        "metadata or an explicit candidate certification."
-    )
-
-
-def _package_metadata_matches_pin(
-    metadata: RuntimeComponentMetadata | PackagePin,
-    package: PackagePin,
-) -> bool:
-    return metadata.name == package.name and metadata.version == package.version
 
 
 def _local_release_manifest_output_path(
@@ -496,7 +318,7 @@ def _local_release_manifest_output_path(
         return None
     raise ValueError(
         "Local file release manifests are only allowed with testing_only=True "
-        "or embed_local_manifests=True. Certified bundles should use immutable "
+        "or embed_local_manifests=True. Published bundles should use immutable "
         "remote release manifest URIs."
     )
 
@@ -518,11 +340,18 @@ def _default_dataset(release: DataReleaseManifest) -> str:
     return next(iter(release.default_datasets.values()))
 
 
+def _region_datasets(release: DataReleaseManifest) -> dict:
+    raw_region_datasets = release.metadata.get("region_datasets")
+    if isinstance(raw_region_datasets, dict):
+        return raw_region_datasets
+    return {}
+
+
 def _artifact_release(
     *,
     release: DataReleaseManifest,
     loaded_manifest: LoadedManifest,
-    release_manifest_uri: str | None,
+    release_manifest_uri: str,
 ) -> ArtifactRelease:
     metadata_release = release.metadata.get("artifact_release", {})
     repo_id = (
@@ -627,56 +456,3 @@ def _first_artifact_repo_id(artifacts: Mapping[str, DataArtifact]) -> str | None
         if artifact.repo_id:
             return artifact.repo_id
     return None
-
-
-def _metadata_to_package_pin(
-    metadata: RuntimeComponentMetadata | PackagePin,
-) -> PackagePin:
-    if isinstance(metadata, PackagePin):
-        return metadata
-    return PackagePin(
-        name=metadata.name,
-        version=metadata.version,
-        resolution_status="pinned",
-        git_sha=metadata.git_sha,
-        wheel_url=metadata.wheel_url,
-        sha256=metadata.wheel_sha256,
-    )
-
-
-def _validate_core_agreement(
-    packages: Mapping[str, PackagePin],
-    countries: Mapping[str, CountryBundle],
-) -> None:
-    core_version = packages["policyengine-core"].version
-    mismatches = [
-        country_id
-        for country_id, country in countries.items()
-        if country.core_package.version != core_version
-        or country.certification.certified_for_core_package.version != core_version
-    ]
-    if mismatches:
-        raise ValueError(
-            "All countries must certify the same exact policyengine-core version; "
-            f"mismatched countries: {', '.join(sorted(mismatches))}."
-        )
-
-
-def _build_profiles(candidate: BundleCandidate) -> dict[str, Profile]:
-    profiles: dict[str, Profile] = {}
-    for profile in candidate.profiles:
-        if profile == "all":
-            country_ids = sorted(candidate.countries)
-        else:
-            country_ids = [profile]
-        package_names = ["policyengine", "policyengine-core"]
-        for country_id in country_ids:
-            model_package = candidate.countries[country_id].model_package
-            if model_package not in package_names:
-                package_names.append(model_package)
-        profiles[profile] = Profile(
-            description=f"{profile} runtime profile generated from bundle candidate.",
-            packages=package_names,
-            countries=country_ids,
-        )
-    return profiles

@@ -1,49 +1,84 @@
 {
-  "schema_version": 1,
-  "bundle_version": "0.0.0-example",
-  "country_id": "us",
-  "model_package": {
-    "name": "policyengine-us",
-    "version": "0.0.0"
+  "artifact_release": {
+    "release_manifest_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "release_manifest_uri": "hf://model/policyengine/policyengine-us-data@1.104.0/release_manifest.json",
+    "repo_id": "policyengine/policyengine-us-data",
+    "repo_type": "model",
+    "version": "1.104.0"
+  },
+  "bundle_version": "4.14.0",
+  "compatibility": {
+    "asserted_by": "policyengine-bundles",
+    "basis": "bundle_candidate",
+    "core_package": {
+      "name": "policyengine-core",
+      "resolution_status": "pinned",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source": "pypi",
+      "version": "3.26.0",
+      "wheel_url": "https://files.pythonhosted.org/packages/policyengine_core-3.26.0-py3-none-any.whl"
+    },
+    "data_package": {
+      "name": "policyengine-us-data",
+      "version": "1.104.0"
+    },
+    "metadata": {
+      "candidate_data_release_manifest_uri": "hf://model/policyengine/policyengine-us-data@1.104.0/release_manifest.json",
+      "candidate_model_package": "policyengine-us"
+    },
+    "model_package": {
+      "name": "policyengine-us",
+      "resolution_status": "pinned",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "source": "pypi",
+      "version": "1.715.2",
+      "wheel_url": "https://files.pythonhosted.org/packages/policyengine_us-1.715.2-py3-none-any.whl"
+    },
+    "release_manifest_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "release_manifest_uri": "hf://model/policyengine/policyengine-us-data@1.104.0/release_manifest.json"
   },
   "core_package": {
     "name": "policyengine-core",
-    "version": "0.0.0"
+    "resolution_status": "pinned",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "source": "pypi",
+    "version": "3.26.0",
+    "wheel_url": "https://files.pythonhosted.org/packages/policyengine_core-3.26.0-py3-none-any.whl"
   },
+  "country_id": "us",
   "data_package": {
     "name": "policyengine-us-data",
-    "version": "0.0.0",
-    "repo_id": "policyengine/policyengine-us-data"
+    "release_manifest_path": "release_manifest.json",
+    "release_manifest_revision": "1.104.0",
+    "repo_id": "policyengine/policyengine-us-data",
+    "repo_type": "model",
+    "version": "1.104.0"
   },
-  "default_dataset": "enhanced_cps_2024",
   "datasets": {
     "enhanced_cps_2024": {
       "kind": "microdata",
-      "uri": "hf://policyengine/policyengine-us-data/enhanced_cps_2024.h5@0.0.0",
+      "path": "enhanced_cps_2024.h5",
+      "release_manifest_artifact_key": "enhanced_cps_2024",
+      "repo_id": "policyengine/policyengine-us-data",
+      "revision": "1.104.0",
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "size_bytes": 12,
       "status": "certified",
-      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
-      "size_bytes": 1
+      "uri": "hf://model/policyengine/policyengine-us-data@1.104.0/enhanced_cps_2024.h5"
     }
   },
-  "certification": {
-    "compatibility_basis": "example",
-    "data_build_id": "policyengine-us-data-0.0.0-example",
-    "built_with_model_package": {
-      "name": "policyengine-us",
-      "version": "0.0.0"
-    },
-    "built_with_core_package": {
-      "name": "policyengine-core",
-      "version": "0.0.0"
-    },
-    "certified_for_model_package": {
-      "name": "policyengine-us",
-      "version": "0.0.0"
-    },
-    "certified_for_core_package": {
-      "name": "policyengine-core",
-      "version": "0.0.0"
-    },
-    "certified_by": "policyengine-bundles example"
-  }
+  "default_dataset": "enhanced_cps_2024",
+  "metadata": {
+    "input_release_manifest_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "input_release_manifest_uri": "hf://model/policyengine/policyengine-us-data@1.104.0/release_manifest.json"
+  },
+  "model_package": {
+    "name": "policyengine-us",
+    "resolution_status": "pinned",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "source": "pypi",
+    "version": "1.715.2",
+    "wheel_url": "https://files.pythonhosted.org/packages/policyengine_us-1.715.2-py3-none-any.whl"
+  },
+  "schema_version": 2
 }

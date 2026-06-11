@@ -69,12 +69,18 @@ def verify_bundle_digest(bundle_dir: Path | str) -> str:
 
 
 def verify_bundle_digests(bundles_root: Path | str) -> list[str]:
-    """Verify every versioned bundle under a committed bundles/ directory."""
+    """Verify committed bundle digests for active bundles.
+
+    Schema v1 bundle directories are read-only historical artifacts and predate
+    the committed ``bundle_digest`` field.
+    """
 
     failures: list[str] = []
     for manifest_path in sorted(Path(bundles_root).glob("*/bundle.json")):
         bundle_dir = manifest_path.parent
         manifest = load_json(manifest_path)
+        if manifest.get("schema_version") == 1:
+            continue
         if "bundle_digest" not in manifest:
             failures.append(f"{bundle_dir}: missing bundle_digest")
             continue

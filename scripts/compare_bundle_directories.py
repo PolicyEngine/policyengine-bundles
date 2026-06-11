@@ -10,7 +10,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
             "Compare a checked-in bundle with a regenerated bundle, ignoring "
-            "run-local timestamps, temp paths, and resolver comments."
+            "run-local timestamps, digests, and validation paths."
         )
     )
     parser.add_argument("expected_bundle_dir", type=Path)

@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from policyengine_bundles.bundle_validation import validate_bundle
+from policyengine_bundles.generation import generate_bundle
 from policyengine_bundles.models import PackagePin
 
 HASH = "a" * 64
@@ -92,14 +94,11 @@ def write_candidate(
     tmp_path: Path,
     manifest_uri: str,
     *,
-    profiles: list[str] | None = None,
+    bundle_version: str = "4.4.0",
 ) -> Path:
     candidate = {
-        "schema_version": 1,
-        "bundle_version": "4.4.0",
-        "policyengine_version": "4.4.0",
-        "python_versions": ["3.13"],
-        "profiles": profiles or ["us"],
+        "schema_version": 2,
+        "bundle_version": bundle_version,
         "packages": {
             "policyengine-core": "3.26.0",
             "policyengine-us": "1.0.0",
@@ -114,3 +113,32 @@ def write_candidate(
     path = tmp_path / "candidate.json"
     write_json(path, candidate)
     return path
+
+
+def generated_bundle(
+    tmp_path: Path,
+    *,
+    bundle_version: str = "4.4.0",
+    validate: bool = True,
+    embed_local_manifests: bool = False,
+    manifest_payload: dict | None = None,
+    output_name: str | None = None,
+) -> Path:
+    release_path = tmp_path / "us-release-manifest.json"
+    write_json(release_path, manifest_payload or release_manifest())
+    candidate_path = write_candidate(
+        tmp_path,
+        release_path.as_uri(),
+        bundle_version=bundle_version,
+    )
+    output_dir = tmp_path / (output_name or bundle_version)
+    generate_bundle(
+        candidate_path,
+        output_dir,
+        package_resolver=fake_resolver,
+        testing_only=not embed_local_manifests,
+        embed_local_manifests=embed_local_manifests,
+    )
+    if validate:
+        validate_bundle(output_dir)
+    return output_dir

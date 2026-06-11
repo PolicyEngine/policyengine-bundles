@@ -152,29 +152,8 @@
           "if": {
             "properties": {
               "status": {
-                "const": "certified"
-              }
-            },
-            "required": [
-              "status"
-            ]
-          },
-          "then": {
-            "properties": {
-              "sha256": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "sha256"
-            ]
-          }
-        },
-        {
-          "if": {
-            "properties": {
-              "status": {
                 "enum": [
+                  "certified",
                   "partially_certified",
                   "hash_pinned"
                 ]
@@ -514,28 +493,6 @@
     },
     "PackagePin": {
       "additionalProperties": false,
-      "anyOf": [
-        {
-          "properties": {
-            "version": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "version"
-          ]
-        },
-        {
-          "properties": {
-            "specifier": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "specifier"
-          ]
-        }
-      ],
       "properties": {
         "git_sha": {
           "anyOf": [
@@ -554,21 +511,10 @@
           "type": "string"
         },
         "resolution_status": {
-          "anyOf": [
-            {
-              "enum": [
-                "pinned",
-                "specifier_only",
-                "unresolved"
-              ],
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Resolution Status"
+          "const": "pinned",
+          "default": "pinned",
+          "title": "Resolution Status",
+          "type": "string"
         },
         "role": {
           "anyOf": [
@@ -622,29 +568,9 @@
           "default": null,
           "title": "Source"
         },
-        "specifier": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Specifier"
-        },
         "version": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Version"
+          "title": "Version",
+          "type": "string"
         },
         "wheel_url": {
           "anyOf": [
@@ -660,7 +586,8 @@
         }
       },
       "required": [
-        "name"
+        "name",
+        "version"
       ],
       "title": "PackagePin",
       "type": "object"

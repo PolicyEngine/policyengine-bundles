@@ -23,6 +23,11 @@ DEFAULT_RELEASE_BASE_URL = (
 
 def package_bundle_release(bundle_dir: Path, output_dir: Path) -> tuple[Path, Path]:
     bundle = load_bundle_directory(bundle_dir)
+    if bundle.manifest.schema_version != 2:
+        raise ValueError(
+            "Schema v1 bundles are read-only historical artifacts and cannot be "
+            "packaged as active releases."
+        )
     _validate_release_ready(bundle)
     if bundle.root.name != bundle.manifest.bundle_version:
         raise ValueError(
@@ -161,10 +166,10 @@ def _validate_release_ready(bundle: BundleDirectory) -> None:
             "Bundle release artifacts require a passing validation report; "
             f"got {report.status!r}."
         )
-    if report.metadata.get("validation_scope") != "full":
+    if report.metadata.get("validation_kind") != "registry":
         raise ValueError(
-            "Bundle release artifacts require validation_scope='full'; "
-            f"got {report.metadata.get('validation_scope')!r}."
+            "Bundle release artifacts require registry validation; "
+            f"got {report.metadata.get('validation_kind')!r}."
         )
     skipped_checks = _checks_with_status(report, "skipped")
     if skipped_checks:
@@ -186,14 +191,10 @@ def _checks_with_status(report: ValidationReport, status: str) -> list[str]:
 
 def _check_label(check: ValidationCheck) -> str:
     parts = [check.name]
-    if check.profile:
-        parts.append(f"profile={check.profile}")
     if check.country:
         parts.append(f"country={check.country}")
     if check.artifact:
         parts.append(f"artifact={check.artifact}")
-    if check.python_version:
-        parts.append(f"python={check.python_version}")
     return " ".join(parts)
 
 
@@ -242,6 +243,10 @@ def _release_asset_names(version: str) -> tuple[str, str, str]:
     return archive_name, f"{archive_name}.sha256", f"policyengine-bundle-{version}.json"
 
 
+def release_asset_names(version: str) -> tuple[str, str, str]:
+    return _release_asset_names(version)
+
+
 def _download_asset(*, url: str, output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     with urllib.request.urlopen(url) as response:
@@ -279,5 +284,5 @@ def _extract_bundle_archive(
                 or member_path.parts[:1] != (expected_root,)
             ):
                 raise ValueError(f"Unsafe bundle archive member: {member.name}.")
-        archive.extractall(output_dir)
+        archive.extractall(output_dir, filter="data")
     return output_dir / expected_root

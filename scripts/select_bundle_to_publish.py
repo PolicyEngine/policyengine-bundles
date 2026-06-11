@@ -40,14 +40,24 @@ def changed_paths(before: str, after: str) -> list[str]:
     return subprocess.check_output(command, text=True).splitlines()
 
 
+def load_candidate(path: Path) -> dict:
+    return json.loads(path.read_text())
+
+
+def is_active_candidate(path: Path) -> bool:
+    return load_candidate(path).get("schema_version") == 2
+
+
 def latest_candidate_version() -> str:
     candidates = []
     for path in Path("candidates").glob("*.json"):
-        payload = json.loads(path.read_text())
+        if not is_active_candidate(path):
+            continue
+        payload = load_candidate(path)
         version = payload["bundle_version"]
         candidates.append((version_key(version), version))
     if not candidates:
-        raise SystemExit("No bundle candidates found.")
+        raise SystemExit("No active schema v2 bundle candidates found.")
     return max(candidates)[1]
 
 
@@ -55,12 +65,10 @@ def changed_bundle_versions(paths: list[str]) -> set[str]:
     versions: set[str] = set()
     for changed_path in paths:
         parts = Path(changed_path).parts
-        if len(parts) >= 2 and parts[0] == "bundles":
-            versions.add(parts[1])
         if len(parts) >= 2 and parts[0] == "candidates" and parts[1].endswith(".json"):
             path = Path(changed_path)
-            if path.exists():
-                payload = json.loads(path.read_text())
+            if path.exists() and is_active_candidate(path):
+                payload = load_candidate(path)
                 versions.add(payload["bundle_version"])
     return versions
 
@@ -82,7 +90,9 @@ def selected_versions() -> set[str]:
 def main() -> int:
     versions = selected_versions()
     if not versions:
-        raise SystemExit("No changed bundle version found in this push.")
+        write_output("should_publish", "false")
+        write_output("reason", "No candidate changes found in this push.")
+        return 0
 
     ordered_versions = sorted(versions, key=version_key)
     if len(ordered_versions) != 1:
@@ -93,27 +103,28 @@ def main() -> int:
 
     version = ordered_versions[0]
     candidate_path = candidate_path_for_version(version)
-    committed_bundle = Path("bundles") / version
     if not candidate_path.exists():
         raise SystemExit(f"Committed candidate missing: {candidate_path}")
-    if not (committed_bundle / "bundle.json").exists():
-        raise SystemExit(f"Committed bundle missing: {committed_bundle}")
 
+    write_output("should_publish", "true")
     write_output("bundle_version", version)
     write_output("candidate", candidate_path.as_posix())
     write_output("generated_bundle", f".tmp/generated-bundles/{version}")
-    write_output("committed_bundle", committed_bundle.as_posix())
     return 0
 
 
 def candidate_path_for_version(version: str) -> Path:
     matches = []
     for path in Path("candidates").glob("*.json"):
-        payload = json.loads(path.read_text())
+        if not is_active_candidate(path):
+            continue
+        payload = load_candidate(path)
         if payload["bundle_version"] == version:
             matches.append(path)
     if not matches:
-        raise SystemExit(f"Committed candidate missing for bundle {version}.")
+        raise SystemExit(
+            f"Committed active schema v2 candidate missing for bundle {version}."
+        )
     if len(matches) > 1:
         raise SystemExit(
             "Expected exactly one candidate for bundle "

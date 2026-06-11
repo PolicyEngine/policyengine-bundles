@@ -1,53 +1,43 @@
 {
-  "schema_version": 1,
-  "bundle_version": "0.0.0-example",
-  "created_at": "2026-04-30T00:00:00Z",
-  "policyengine": {
-    "name": "policyengine",
-    "version": "0.0.0-example"
+  "bundle_version": "4.14.0",
+  "countries": {
+    "us": "countries/us.json"
+  },
+  "created_at": "2026-06-05T00:00:00Z",
+  "metadata": {
+    "generated_by": "scripts/generate_bundle.py",
+    "testing_only": true
   },
   "packages": {
     "policyengine": {
       "name": "policyengine",
-      "version": "0.0.0-example"
+      "resolution_status": "pinned",
+      "role": "bundle_carrier",
+      "version": "4.14.0"
     },
     "policyengine-core": {
       "name": "policyengine-core",
-      "version": "0.0.0"
+      "resolution_status": "pinned",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "source": "pypi",
+      "version": "3.26.0",
+      "wheel_url": "https://files.pythonhosted.org/packages/policyengine_core-3.26.0-py3-none-any.whl"
     },
     "policyengine-us": {
       "name": "policyengine-us",
-      "version": "0.0.0"
+      "resolution_status": "pinned",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "source": "pypi",
+      "version": "1.715.2",
+      "wheel_url": "https://files.pythonhosted.org/packages/policyengine_us-1.715.2-py3-none-any.whl"
     }
   },
-  "profiles": {
-    "us": {
-      "description": "US-only certified runtime profile.",
-      "packages": [
-        "policyengine",
-        "policyengine-core",
-        "policyengine-us"
-      ],
-      "countries": [
-        "us"
-      ],
-      "install_targets": {
-        "py313": {
-          "python_version": "3.13",
-          "constraints": "constraints/constraints-us-py313.txt",
-          "lockfile": "lockfiles/pylock.us.py313.toml",
-          "resolver": "uv"
-        }
-      }
-    }
+  "policyengine": {
+    "name": "policyengine",
+    "resolution_status": "pinned",
+    "role": "bundle_carrier",
+    "version": "4.14.0"
   },
-  "countries": {
-    "us": "countries/us.json"
-  },
-  "metadata": {
-    "python_versions": [
-      "3.13"
-    ]
-  },
+  "schema_version": 2,
   "validation_report": "validation-report.json"
 }
