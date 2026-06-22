@@ -1,7 +1,13 @@
 # policyengine-bundles
 
-`policyengine-bundles` publishes immutable compatibility manifests for
-PolicyEngine package sets.
+`policyengine-bundles` is an archival repository for historical compatibility
+manifests for PolicyEngine package sets.
+
+New PolicyEngine bundles are owned by `policyengine.py` and installed through
+the `policyengine bundle install` command, for example
+`uvx --from policyengine policyengine bundle install --venv .venv`. This
+repository no longer publishes new bundle releases or opens consuming PRs into
+`policyengine.py`.
 
 A bundle answers one question:
 
@@ -57,7 +63,7 @@ tooling can load and check their internal metadata consistency, but it does not
 generate new schema v1 bundles, re-run their runtime validation, package them as
 active releases, or open `policyengine.py` consuming PRs for them.
 
-## Local Workflow
+## Historical Local Workflow
 
 Install tooling:
 
@@ -99,19 +105,10 @@ ruff check .
 
 ## Publication
 
-The `Publish bundle` workflow runs on pushes to `main` that change
-`candidates/**`, or from manual workflow dispatch.
-
-Publication steps:
-
-1. Select a single bundle candidate.
-2. Generate a schema v2 bundle into `.tmp/generated-bundles/<version>`.
-3. Run registry validation.
-4. Package immutable release assets.
-5. If the GitHub release already exists, verify the generated assets match it.
-6. If it does not exist, publish the release assets.
-7. Open a `policyengine.py` consuming PR for bundles that include both UK and
-   US country packages.
+Publication is disabled. Historical scripts remain for inspection and
+validation of existing manifests only. To update the current certified
+PolicyEngine bundle, open a bundle metadata PR in `policyengine.py` with
+`scripts/prepare_stack_update.py`.
 
 ## Schemas
 
