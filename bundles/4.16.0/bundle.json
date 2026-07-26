@@ -1,4 +1,5 @@
 {
+  "bundle_digest": "sha256:bd16c87efdbd2db47228d36e2307ae8e94d2b18f9f1641d8dd0218f5ee072c73",
   "bundle_version": "4.16.0",
   "countries": {
     "us": "countries/us.json"
